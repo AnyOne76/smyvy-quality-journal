@@ -1,0 +1,618 @@
+<title>Смывы 2026 — аналитика и автоматизация</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:        #eef1f1;
+    --surface:      #ffffff;
+    --surface-2:    #f7f9f9;
+    --ink:          #0e1618;
+    --ink-2:        #566360;
+    --muted:        #8a938f;
+    --grid:         #e4e8e7;
+    --hairline:     rgba(14,22,24,0.10);
+    --accent:       #0e8f86;
+    --accent-soft:  #dcefed;
+    --good:         #0a8f24;
+    --warning:      #d98a00;
+    --serious:      #e07038;
+    --critical:     #cf3b3b;
+    --c-blue:       #2a78d6;
+    --c-orange:     #eb6834;
+    --c-aqua:       #1baf7a;
+    --c-yellow:     #c98500;
+    --shadow:       0 1px 2px rgba(14,22,24,.04), 0 6px 20px rgba(14,22,24,.05);
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane:      #0b0e0e;
+      --surface:    #15191a;
+      --surface-2:  #1b2021;
+      --ink:        #edf2f1;
+      --ink-2:      #9aa6a2;
+      --muted:      #77817d;
+      --grid:       #262c2c;
+      --hairline:   rgba(255,255,255,0.10);
+      --accent:     #2bbcb0;
+      --accent-soft:#123230;
+      --good:       #2eb043;
+      --warning:    #e6a521;
+      --serious:    #ec835a;
+      --critical:   #e05a5a;
+      --c-blue:     #3987e5;
+      --c-orange:   #e0703a;
+      --c-aqua:     #22c98e;
+      --c-yellow:   #e0a52a;
+      --shadow:     0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane:#0b0e0e; --surface:#15191a; --surface-2:#1b2021; --ink:#edf2f1; --ink-2:#9aa6a2;
+    --muted:#77817d; --grid:#262c2c; --hairline:rgba(255,255,255,0.10); --accent:#2bbcb0;
+    --accent-soft:#123230; --good:#2eb043; --warning:#e6a521; --serious:#ec835a; --critical:#e05a5a;
+    --c-blue:#3987e5; --c-orange:#e0703a; --c-aqua:#22c98e; --c-yellow:#e0a52a;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 26px rgba(0,0,0,.4);
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--plane); color: var(--ink); font-family: var(--sans);
+    -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px 96px; }
+  a { color: var(--accent); }
+
+  /* ---- header ---- */
+  header { border-bottom: 1px solid var(--hairline); background: var(--surface);
+    position: sticky; top: 0; z-index: 20; backdrop-filter: saturate(1.2); }
+  .bar { max-width: 1180px; margin: 0 auto; padding: 14px 24px; display: flex;
+    align-items: center; gap: 14px; flex-wrap: wrap; }
+  .logo { width: 30px; height: 30px; border-radius: 7px; background: var(--accent);
+    display: grid; place-items: center; flex: none; }
+  .logo svg { width: 18px; height: 18px; }
+  .brand { display: flex; flex-direction: column; line-height: 1.15; }
+  .brand b { font-size: 14px; font-weight: 650; letter-spacing: -.01em; }
+  .brand span { font-size: 11.5px; color: var(--muted); }
+  .src { font-family: var(--mono); font-size: 11px; color: var(--muted);
+    background: var(--surface-2); border: 1px solid var(--hairline); padding: 5px 10px; border-radius: 6px; }
+  .navform { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+    font-size: 12.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft);
+    border: 1px solid transparent; padding: 7px 13px; border-radius: 9px; white-space: nowrap; }
+  .navform:hover { filter: brightness(1.05); }
+  .navform svg { width: 15px; height: 15px; }
+  @media (max-width: 620px) { .navform span { display: none; } .src { display: none; } }
+
+  /* ---- hero ---- */
+  .hero { padding: 54px 0 30px; }
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 16px; }
+  h1 { font-size: clamp(30px, 4.6vw, 52px); line-height: 1.04; letter-spacing: -.025em;
+    font-weight: 700; margin: 0 0 18px; text-wrap: balance; max-width: 17ch; }
+  .lede { font-size: 18px; color: var(--ink-2); max-width: 62ch; margin: 0; }
+  .lede b { color: var(--ink); font-weight: 600; }
+
+  /* ---- kpi ---- */
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; margin: 34px 0 8px; }
+  .kpi { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+    padding: 18px 16px 16px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .kpi .cap { font-size: 11.5px; color: var(--muted); font-weight: 550; letter-spacing: .01em;
+    display: block; min-height: 30px; }
+  .kpi .val { font-size: 34px; font-weight: 700; letter-spacing: -.03em; line-height: 1;
+    margin-top: 10px; font-variant-numeric: tabular-nums; }
+  .kpi .sub { font-size: 11.5px; color: var(--ink-2); margin-top: 6px; }
+  .kpi .stripe { position: absolute; left: 0; top: 0; bottom: 0; width: 3px; }
+  .kpi.good .stripe { background: var(--good); } .kpi.good .val { color: var(--good); }
+  .kpi.warn .stripe { background: var(--warning); }
+  .kpi.crit .stripe { background: var(--critical); } .kpi.crit .val { color: var(--critical); }
+  .kpi.acc .stripe { background: var(--accent); }
+
+  /* ---- sections ---- */
+  section { margin-top: 58px; }
+  .sec-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+  .sec-num { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 600;
+    border: 1px solid var(--accent); border-radius: 5px; padding: 2px 7px; }
+  h2 { font-size: clamp(21px, 2.6vw, 28px); letter-spacing: -.02em; font-weight: 680; margin: 0;
+    text-wrap: balance; }
+  .sec-sub { font-size: 14px; color: var(--ink-2); margin: 8px 0 0; max-width: 74ch; }
+
+  .grid { display: grid; gap: 16px; }
+  .g2 { grid-template-columns: 1fr 1fr; }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .card { background: var(--surface); border: 1px solid var(--hairline); border-radius: 14px;
+    padding: 20px; box-shadow: var(--shadow); }
+  .card h3 { font-size: 14.5px; font-weight: 640; margin: 0 0 3px; letter-spacing: -.01em; }
+  .card .note { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+  .card.span2 { grid-column: span 2; }
+
+  /* charts */
+  .chart { width: 100%; display: block; overflow: visible; font-family: var(--sans); }
+  .chart text { fill: var(--ink-2); }
+  .axislbl { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+  .barlbl { font-size: 12px; fill: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .catlbl { font-size: 12.5px; fill: var(--ink); }
+  .bar-rect { transition: opacity .12s; cursor: default; }
+  .bar-rect:hover { opacity: .82; }
+
+  /* legend */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 14px; font-size: 12px; color: var(--ink-2); }
+  .legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; margin-right: 6px;
+    vertical-align: -1px; }
+
+  /* insight cards */
+  .insight { display: flex; gap: 14px; align-items: flex-start; }
+  .insight .ic { width: 34px; height: 34px; border-radius: 9px; flex: none; display: grid;
+    place-items: center; background: var(--accent-soft); }
+  .insight .ic svg { width: 18px; height: 18px; stroke: var(--accent); }
+  .insight.c-crit .ic { background: color-mix(in srgb, var(--critical) 16%, transparent); }
+  .insight.c-crit .ic svg { stroke: var(--critical); }
+  .insight.c-warn .ic { background: color-mix(in srgb, var(--warning) 18%, transparent); }
+  .insight.c-warn .ic svg { stroke: var(--warning); }
+  .insight h4 { margin: 0 0 4px; font-size: 14px; font-weight: 640; }
+  .insight p { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .insight p b { color: var(--ink); font-weight: 640; font-variant-numeric: tabular-nums; }
+
+  /* table */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); font-weight: 600; padding: 0 12px 9px; border-bottom: 1px solid var(--hairline); }
+  .tbl td { padding: 11px 12px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tbl td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+  .pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+  .pill.crit { background: color-mix(in srgb, var(--critical) 14%, transparent); color: var(--critical); }
+  .pill.crit::before { background: var(--critical); }
+  .pill.warn { background: color-mix(in srgb, var(--warning) 18%, transparent); color: var(--warning); }
+  .pill.warn::before { background: var(--warning); }
+  .mono { font-family: var(--mono); }
+
+  /* problems */
+  .prob { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+  .prob .card { padding: 18px; }
+  .prob .tag { font-family: var(--mono); font-size: 11px; color: var(--critical); font-weight: 600; }
+  .prob h4 { margin: 8px 0 5px; font-size: 14.5px; font-weight: 640; }
+  .prob p { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+
+  /* roadmap */
+  .road { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .lvl { background: var(--surface); border: 1px solid var(--hairline); border-radius: 16px;
+    padding: 22px; box-shadow: var(--shadow); display: flex; flex-direction: column; position: relative; }
+  .lvl .top { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+  .lvl .badge { font-family: var(--mono); font-size: 11px; font-weight: 600; padding: 3px 9px;
+    border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .lvl .eff { margin-left: auto; font-size: 11px; color: var(--muted); }
+  .lvl h3 { font-size: 17px; font-weight: 680; margin: 8px 0 6px; letter-spacing: -.01em; }
+  .lvl .desc { font-size: 13px; color: var(--ink-2); margin: 0 0 16px; }
+  .lvl ul { list-style: none; padding: 0; margin: 0 0 18px; display: flex; flex-direction: column; gap: 10px; }
+  .lvl li { font-size: 13px; display: flex; gap: 9px; align-items: flex-start; color: var(--ink); }
+  .lvl li svg { width: 15px; height: 15px; flex: none; margin-top: 2px; stroke: var(--accent); }
+  .lvl .out { margin-top: auto; font-size: 12px; padding: 11px 13px; border-radius: 10px;
+    background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink-2); }
+  .lvl .out b { color: var(--ink); }
+  .tech { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+  .tech span { font-family: var(--mono); font-size: 11px; padding: 3px 8px; border-radius: 6px;
+    background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink-2); }
+
+  /* flow strip */
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 26px 0 0; flex-wrap: wrap;
+    border: 1px solid var(--hairline); border-radius: 14px; overflow: hidden; background: var(--surface); }
+  .flow .step { flex: 1 1 150px; padding: 16px 18px; border-right: 1px solid var(--hairline);
+    display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+  .flow .step:last-child { border-right: none; }
+  .flow .k { font-family: var(--mono); font-size: 11px; color: var(--accent); }
+  .flow .t { font-size: 13.5px; font-weight: 620; }
+  .flow .d { font-size: 12px; color: var(--muted); }
+
+  footer { margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--hairline);
+    font-size: 12.5px; color: var(--muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  /* tooltip */
+  #tt { position: fixed; pointer-events: none; z-index: 60; opacity: 0; transition: opacity .1s;
+    background: var(--ink); color: var(--plane); font-size: 12px; padding: 7px 10px; border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.28); max-width: 240px; line-height: 1.35; }
+  #tt b { color: #fff; } :root[data-theme="light"] #tt, :root:not([data-theme]) #tt { }
+  #tt .v { font-family: var(--mono); }
+
+  @media (max-width: 900px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .g2, .g3, .prob, .road { grid-template-columns: 1fr; }
+    .card.span2 { grid-column: auto; }
+  }
+  @media (max-width: 560px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .wrap { padding: 0 16px 72px; }
+    .bar { padding: 12px 16px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header>
+  <div class="bar">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><circle cx="8" cy="8" r="1.1" fill="#fff"/><circle cx="16.5" cy="9.5" r="1.1" fill="#fff"/><circle cx="15" cy="16" r="1.1" fill="#fff"/></svg>
+    </div>
+    <div class="brand">
+      <b>Микробиологические смывы · Служба качества</b>
+      <span>Панель аналитики и автоматизации · сезон 2026</span>
+    </div>
+    <a class="navform" href="https://claude.ai/code/artifact/1c68f899-86d1-41a8-b68d-aaa6f1a7aaac" target="_blank" rel="noopener" title="Открыть форму ввода">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+      <span>Форма ввода</span></a>
+    <div class="src">07. Результаты смывов 2026.xlsx</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <p class="eyebrow">Производственный контроль · чистота оборудования</p>
+    <h1>1 915 смывов, 10 цехов, один Excel вручную</h1>
+    <p class="lede">Журнал смывов заполняется руками в разрозненных вкладках по цехам. Мы разобрали его целиком: за сезон <b>99,4% проб в норме</b>, но данные скрывают <b>12 несоответствий</b>, <b>очаг повышенной микрофлоры в ЦМП</b> и одно превышение норматива. Ниже — что показывают цифры и как это автоматизировать через шаблон, RPA и ИИ.</p>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <!-- ============ 1. ЧТО ПОКАЗЫВАЮТ ДАННЫЕ ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2>Что показывают данные</h2>
+    </div>
+    <p class="sec-sub">Разбор всех вкладок сведён в единую картину — так должен выглядеть журнал, если бы данные собирались автоматически.</p>
+
+    <div class="grid g2" style="margin-bottom:16px">
+      <div class="card">
+        <h3>Объём контроля по цехам</h3>
+        <p class="note">Число проб за сезон · подпись — количество сессий отбора</p>
+        <svg class="chart" id="ch-ceh"></svg>
+      </div>
+      <div class="card">
+        <h3>Динамика по месяцам</h3>
+        <p class="note">Объём проб и число сигналов (несоответствия + повышенная микрофлора)</p>
+        <svg class="chart" id="ch-month"></svg>
+        <div class="legend">
+          <span><i style="background:var(--accent)"></i>Проб за месяц</span>
+          <span><i style="background:var(--critical)"></i>Несоответствия</span>
+          <span><i style="background:var(--warning)"></i>Повышенный КМАФАнМ</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h3>Очаг повышенной микрофлоры (КМАФАнМ)</h3>
+        <p class="note">Где фиксируется рост общего микробного числа — 21 проба выше базового уровня</p>
+        <svg class="chart" id="ch-elev"></svg>
+      </div>
+      <div class="card">
+        <h3>Что реально тестируют</h3>
+        <p class="note">Доля проб с фактическим анализом показателя (из 1 915)</p>
+        <svg class="chart" id="ch-fill"></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. ЗАКОНОМЕРНОСТИ ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2>Закономерности и сигналы</h2>
+    </div>
+    <p class="sec-sub">То, что не видно в ручной таблице, но выходит наружу при сведении данных вместе.</p>
+
+    <div class="grid g3" style="margin-bottom:16px">
+      <div class="card insight c-crit">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 9v4m0 4h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg></div>
+        <div><h4>БГКП — источник №1 несоответствий</h4>
+          <p><b>11 из 12</b> несоответствий — это бактерии группы кишечной палочки. Один случай листерии (ЦМП, котлетный автомат, 24.01).</p></div>
+      </div>
+      <div class="card insight c-warn">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
+        <div><h4>ЦМП — очаг микрофлоры</h4>
+          <p><b>17 из 21</b> повышенной пробы КМАФАнМ — в цехе №9. «Автомат FORMATIC» всплывал <b>3 раза</b>, «Волчок Seydelmann» — <b>2 раза</b>.</p></div>
+      </div>
+      <div class="card insight c-crit">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 2v20M2 7l10-5 10 5M4 10v7M20 10v7"/></svg></div>
+        <div><h4>Единственное превышение норматива</h4>
+          <p>Гильотина (Упаковка, 22.02): <b class="mono">6,4×10³</b> при лимите <b class="mono">1×10³</b> КОЕ/см². В ручной таблице этот выброс визуально ничем не выделен.</p></div>
+      </div>
+      <div class="card insight c-warn">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/></svg></div>
+        <div><h4>Апрель — пиковый месяц</h4>
+          <p>В апреле совпали <b>5 несоответствий</b> и <b>10 повышенных</b> проб. Сезонность видна только на сводном графике, не в вкладках.</p></div>
+      </div>
+      <div class="card insight">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg></div>
+        <div><h4>Повторяющиеся точки-нарушители</h4>
+          <p>«Руки рабочих (Мамадалиев)» — БГКП дважды за 01.06. Повторы = адрес для точечной санобработки, а не разовая случайность.</p></div>
+      </div>
+      <div class="card insight">
+        <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M4 4h16v4H4zM4 12h16v8H4z"/></svg></div>
+        <div><h4>Половина показателей — вслепую</h4>
+          <p>Staph тестируют в <b>4%</b> проб, плесень — в <b>0,6%</b>, дрожжи — <b>ни разу</b>. Нужен план: почему графы есть, а анализа нет.</p></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Журнал несоответствий · сезон 2026</h3>
+      <p class="note">Все зафиксированные «обнаружено» — 12 случаев в 4 цехах</p>
+      <div style="overflow-x:auto">
+        <table class="tbl" id="fail-table">
+          <thead><tr><th>Дата</th><th>Цех</th><th>Точка отбора</th><th>Показатель</th><th>Статус</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. ПРОБЛЕМЫ РУЧНОГО ВЕДЕНИЯ ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">03</span>
+      <h2>Почему ручной Excel — узкое место</h2>
+    </div>
+    <p class="sec-sub">Это не про аккуратность службы качества — это про структуру файла. Каждая из проблем ниже реально присутствует в текущем журнале.</p>
+    <div class="prob">
+      <div class="card"><div class="tag">СТРУКТУРА</div><h4>У каждого цеха своя шапка</h4><p>Между листами расходятся заголовки и порядок столбцов: где-то есть «№», где-то нет; «Дата отбора» против «Дата взятия (мастер)». Свести вместе можно только руками.</p></div>
+      <div class="card"><div class="tag">ЯЧЕЙКИ</div><h4>Объединённые даты и переносы</h4><p>Дата стоит одна на блок строк, а названия точек содержат переносы строк прямо в ячейке. Любая выгрузка «съедает» такие данные.</p></div>
+      <div class="card"><div class="tag">ЗНАЧЕНИЯ</div><h4>Свободный текст вместо кодов</h4><p><span class="mono">менее 1,5 х 10*2</span>, <span class="mono">н/о</span>, <span class="mono">-</span>, <span class="mono">обнаружено</span> — как текст. Фильтр «покажи все несоответствия» невозможен без разбора строк.</p></div>
+      <div class="card"><div class="tag">СПРАВОЧНИКИ</div><h4>Разнобой в названиях точек</h4><p>Одна и та же единица записана по-разному: «Котлетный автомат» и «Автомат для производства котлет FORMATIC». История по точке рвётся, повторных нарушителей не видно.</p></div>
+      <div class="card"><div class="tag">ОШИБКИ</div><h4>Незаметные опечатки</h4><p>24 пробы датированы <span class="mono">2025-01</span> в отчёте за 2026 год. Задвоенные строки (одна точка, одна дата — два раза). Валидации нет.</p></div>
+      <div class="card"><div class="tag">АНАЛИТИКА</div><h4>Ноль трендов и алертов</h4><p>Нет сводки по заводу, нет истории по точке, нет сигнала при «обнаружено». Превышение норматива в 6 раз лежит в таблице как обычная строка.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ 4. ДОРОЖНАЯ КАРТА ============ -->
+  <section>
+    <div class="sec-head">
+      <span class="sec-num">04</span>
+      <h2>Дорожная карта автоматизации</h2>
+    </div>
+    <p class="sec-sub">Три уровня, каждый работает самостоятельно и окупается отдельно. Можно внедрять последовательно — от наведения порядка к предсказанию проблем.</p>
+
+    <div class="road">
+      <div class="lvl">
+        <div class="top"><span class="badge">Уровень 1</span><span class="eff">1–2 недели</span></div>
+        <h3>Единый шаблон + RPA-сведение</h3>
+        <p class="desc">Наводим порядок в данных, не меняя привычек службы качества.</p>
+        <div class="tech"><span>Excel / Google Sheets</span><span>Power Query</span><span>Power Automate</span><span>Python</span></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Один шаблон листа с выпадающими списками значений (н/о, менее…, обнаружено)</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Проверка ввода: дата, диапазон КОЕ, обязательные поля — прямо в ячейке</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Робот раз в день собирает все цеха в единую базу и типизирует значения</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Справочники цехов и точек отбора — конец разнобою в названиях</li>
+        </ul>
+        <div class="out"><b>Результат:</b> чистые данные и живой дашборд вместо 13 вкладок. Ноль ручного сведения.</div>
+      </div>
+
+      <div class="lvl">
+        <div class="top"><span class="badge">Уровень 2</span><span class="eff">3–5 недель</span></div>
+        <h3>ИИ-ввод: фото и голос вместо клавиатуры</h3>
+        <p class="desc">Убираем сам ручной набор — данные попадают в систему с источника.</p>
+        <div class="tech"><span>Claude Vision</span><span>OCR</span><span>Telegram-бот</span><span>Speech-to-text</span></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Фото протокола лаборатории → ИИ распознаёт и раскладывает по показателям</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Мастер диктует смыв голосом в бота прямо в цехе — запись в базу мгновенно</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>QR/штрихкод точки отбора — привязка пробы к оборудованию без опечаток</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>ИИ подсвечивает сомнительный ввод: «6,4×10³ — это выше нормы, подтвердите»</li>
+        </ul>
+        <div class="out"><b>Результат:</b> время на ведение журнала падает в разы, опечатки почти исчезают.</div>
+      </div>
+
+      <div class="lvl">
+        <div class="top"><span class="badge">Уровень 3</span><span class="eff">параллельно</span></div>
+        <h3>ИИ-аналитика: алерты и прогноз</h3>
+        <p class="desc">Система не просто хранит — она предупреждает и объясняет.</p>
+        <div class="tech"><span>Claude API</span><span>Streamlit</span><span>Telegram-алерты</span><span>ML-тренды</span></div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Мгновенный алерт ответственному при «обнаружено» или превышении норматива</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>«Горячие точки»: система сама находит повторных нарушителей, как FORMATIC</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Прогноз риска по точке и авто-предложение усилить санобработку</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Чат по данным: «покажи все БГКП в колбасном за апрель» — ответ за секунды</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>Авто-отчёт для аудита и ХАССП в один клик</li>
+        </ul>
+        <div class="out"><b>Результат:</b> контроль из «фиксируем постфактум» превращается в «предупреждаем заранее».</div>
+      </div>
+    </div>
+
+    <div class="flow" aria-label="Схема потока данных">
+      <div class="step"><span class="k">01</span><span class="t">Отбор смыва</span><span class="d">Фото / голос / QR точки в цехе</span></div>
+      <div class="step"><span class="k">02</span><span class="t">ИИ-распознавание</span><span class="d">Значения раскладываются по показателям</span></div>
+      <div class="step"><span class="k">03</span><span class="t">Единая база</span><span class="d">Валидация, типизация, справочники</span></div>
+      <div class="step"><span class="k">04</span><span class="t">Алерты</span><span class="d">Несоответствие → уведомление сразу</span></div>
+      <div class="step"><span class="k">05</span><span class="t">Дашборд + прогноз</span><span class="d">Тренды, горячие точки, отчёты</span></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Источник: 07. Результаты смывов 2026.xlsx · 1 915 проб · 10 цехов · 8 показателей</span>
+    <span>Аналитика подготовлена для службы качества · 2026</span>
+  </footer>
+</div>
+
+<div id="tt"></div>
+
+<script>
+const DATA = {
+  totals: {"records":1915,"fails":12,"elev":21,"activeCehs":10,"conformPct":99.37},
+  byCeh: [
+    {"ceh":"Сырьевой №2","n":479,"sessions":25},
+    {"ceh":"Деликатесный №4","n":450,"sessions":58},
+    {"ceh":"СК №3","n":283,"sessions":20},
+    {"ceh":"Столовая","n":261,"sessions":28},
+    {"ceh":"ЦМП №9","n":154,"sessions":15},
+    {"ceh":"Колбасный №5","n":124,"sessions":6},
+    {"ceh":"Упаковка №7","n":121,"sessions":30},
+    {"ceh":"Нарезка №8","n":24,"sessions":8},
+    {"ceh":"Приемка №1","n":12,"sessions":3},
+    {"ceh":"Постников","n":7,"sessions":1}
+  ],
+  monthly: [
+    {"m":"Янв","n":288,"fail":1,"elev":3},
+    {"m":"Фев","n":270,"fail":0,"elev":1},
+    {"m":"Мар","n":263,"fail":0,"elev":3},
+    {"m":"Апр","n":380,"fail":5,"elev":10},
+    {"m":"Май","n":317,"fail":0,"elev":1},
+    {"m":"Июн","n":243,"fail":5,"elev":0},
+    {"m":"Июл","n":130,"fail":1,"elev":3}
+  ],
+  elevByCeh: [
+    {"ceh":"ЦМП №9","n":17},
+    {"ceh":"Столовая","n":3},
+    {"ceh":"Упаковка №7","n":1}
+  ],
+  fill: [
+    {"k":"БГКП","n":1906},{"k":"КМАФАнМ","n":1729},{"k":"Listeria","n":776},
+    {"k":"Proteus","n":696},{"k":"Salmonella","n":658},{"k":"Staph","n":80},
+    {"k":"Плесень","n":12},{"k":"Дрожжи","n":0}
+  ],
+  fails: [
+    {"date":"01.06","ceh":"Деликатесный №4","loc":"Руки рабочих (Мамадалиев)","ind":"БГКП"},
+    {"date":"01.06","ceh":"Деликатесный №4","loc":"Руки рабочих (Мамадалиев)","ind":"БГКП"},
+    {"date":"22.06","ceh":"Деликатесный №4","loc":"Петлевязальная машина SCHAD E 85-1 №1","ind":"БГКП"},
+    {"date":"22.06","ceh":"Деликатесный №4","loc":"Петлевязальная машина SCHAD E 85-1 №3","ind":"БГКП"},
+    {"date":"16.04","ceh":"Колбасный №5","loc":"Стена, отделение балансировки шпига","ind":"БГКП"},
+    {"date":"16.04","ceh":"Колбасный №5","loc":"Стена, камера посола","ind":"БГКП"},
+    {"date":"30.04","ceh":"Колбасный №5","loc":"Ледогенератор №1","ind":"БГКП"},
+    {"date":"30.04","ceh":"Колбасный №5","loc":"Вак. наполнитель Handtmann №4","ind":"БГКП"},
+    {"date":"30.04","ceh":"Колбасный №5","loc":"Ящик","ind":"БГКП"},
+    {"date":"30.06","ceh":"СК №3","loc":"Стенд хранения инвентаря мойки","ind":"БГКП"},
+    {"date":"14.07","ceh":"СК №3","loc":"Сейфы хранения моющих средств","ind":"БГКП"},
+    {"date":"24.01","ceh":"ЦМП №9","loc":"Котлетный автомат","ind":"Listeria"}
+  ]
+};
+
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const tt = document.getElementById('tt');
+function showTT(html, e){ tt.innerHTML = html; tt.style.opacity = 1;
+  const x = e.clientX, y = e.clientY, w = tt.offsetWidth, h = tt.offsetHeight;
+  tt.style.left = Math.min(x+14, innerWidth-w-8) + 'px';
+  tt.style.top  = Math.max(y-h-12, 8) + 'px'; }
+function hideTT(){ tt.style.opacity = 0; }
+
+const SVG = 'http://www.w3.org/2000/svg';
+function el(tag, attrs){ const n = document.createElementNS(SVG, tag);
+  for(const k in attrs) n.setAttribute(k, attrs[k]); return n; }
+
+/* ---------- KPI ---------- */
+function renderKPIs(){
+  const t = DATA.totals;
+  const items = [
+    {cap:'Проб за сезон', val:'1 915', sub:'ручной ввод в Excel', cls:'acc'},
+    {cap:'Цехов на контроле', val:'10', sub:'сведены в одну картину', cls:''},
+    {cap:'Соответствие норме', val:'99,4%', sub:'1 903 из 1 915 проб', cls:'good'},
+    {cap:'Несоответствий', val:'12', sub:'11 БГКП · 1 листерия', cls:'crit'},
+    {cap:'Повышенный КМАФАнМ', val:'21', sub:'17 из них — в ЦМП', cls:'warn'},
+    {cap:'Превышений норматива', val:'1', sub:'Гильотина · 6,4×10³', cls:'crit'}
+  ];
+  document.getElementById('kpis').innerHTML = items.map(i =>
+    `<div class="kpi ${i.cls}"><span class="stripe"></span><span class="cap">${i.cap}</span>
+     <div class="val">${i.val}</div><div class="sub">${i.sub}</div></div>`).join('');
+}
+
+/* ---------- horizontal bars ---------- */
+function hBar(id, rows, opt){
+  opt = opt || {};
+  const svg = document.getElementById(id);
+  const W = 620, rowH = opt.rowH || 34, padT = 6, padB = 4;
+  const labelW = opt.labelW || 150, valW = 54;
+  const H = padT + padB + rows.length*rowH;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('height', H); svg.innerHTML = '';
+  const max = Math.max(...rows.map(r => r.v), 1);
+  const x0 = labelW, x1 = W - valW;
+  rows.forEach((r,i) => {
+    const cy = padT + i*rowH + rowH/2;
+    const bw = Math.max((r.v/max)*(x1-x0), r.v>0?3:0);
+    const lab = el('text', {x:x0-10, y:cy+4, 'text-anchor':'end', class:'catlbl'});
+    lab.textContent = r.label; svg.appendChild(lab);
+    svg.appendChild(el('rect', {x:x0, y:cy-9, width:Math.max(x1-x0,0), height:18, rx:5,
+      fill:css('--surface-2')}));
+    const bar = el('rect', {x:x0, y:cy-9, width:bw, height:18, rx:5, fill:r.color||css('--accent'),
+      class:'bar-rect'});
+    bar.addEventListener('mousemove', e => showTT(r.tip||`<b>${r.label}</b><br><span class="v">${r.v}</span> ${opt.unit||''}`, e));
+    bar.addEventListener('mouseleave', hideTT);
+    svg.appendChild(bar);
+    const vt = el('text', {x:x1+8, y:cy+4, class:'barlbl'});
+    vt.textContent = opt.fmt ? opt.fmt(r) : r.v; svg.appendChild(vt);
+    if(r.sub){ const st = el('text', {x:x1+8, y:cy+16, class:'axislbl'}); st.textContent = r.sub;
+      svg.appendChild(st); }
+  });
+}
+
+/* ---------- monthly combo (two stacked panels, one x) ---------- */
+function renderMonthly(){
+  const svg = document.getElementById('ch-month');
+  const m = DATA.monthly;
+  const W = 620, H = 250, padL = 34, padR = 12, padT = 8, padB = 46;
+  const topH = 118, gap = 30, botY = padT + topH + gap, botH = H - botY - padB + 20;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('height', H); svg.innerHTML='';
+  const n = m.length, slot = (W-padL-padR)/n;
+  const maxN = Math.max(...m.map(d=>d.n));
+  const maxSig = Math.max(...m.map(d=>d.fail+d.elev), 1);
+  // gridlines top
+  for(let g=0; g<=2; g++){
+    const val = Math.round(maxN*g/2), y = padT+topH - (val/maxN)*topH;
+    svg.appendChild(el('line',{x1:padL,y1:y,x2:W-padR,y2:y,stroke:css('--grid'),'stroke-width':1}));
+    const t = el('text',{x:padL-6,y:y+3,'text-anchor':'end',class:'axislbl'}); t.textContent=val; svg.appendChild(t);
+  }
+  m.forEach((d,i) => {
+    const cx = padL + slot*i + slot/2;
+    // top: проб bar
+    const bh = (d.n/maxN)*topH, by = padT+topH-bh, bw = Math.min(slot*0.5, 30);
+    const bar = el('rect',{x:cx-bw/2, y:by, width:bw, height:bh, rx:4, fill:css('--accent'), class:'bar-rect'});
+    bar.addEventListener('mousemove',e=>showTT(`<b>${d.m}</b><br><span class="v">${d.n}</span> проб · <span class="v">${d.fail}</span> несоотв. · <span class="v">${d.elev}</span> повыш.`,e));
+    bar.addEventListener('mouseleave',hideTT); svg.appendChild(bar);
+    const vt = el('text',{x:cx,y:by-5,'text-anchor':'middle',class:'axislbl'}); vt.textContent=d.n; svg.appendChild(vt);
+    // bottom: stacked signals
+    const unit = botH/maxSig;
+    let yy = botY+botH;
+    [['fail',css('--critical')],['elev',css('--warning')]].forEach(([key,col])=>{
+      const v=d[key]; if(!v) return; const seg=v*unit; yy-=seg;
+      const r=el('rect',{x:cx-bw/2,y:yy,width:bw,height:Math.max(seg-2,1),rx:3,fill:col,class:'bar-rect'});
+      r.addEventListener('mousemove',e=>showTT(`<b>${d.m}</b> · ${key==='fail'?'несоответствия':'повышенный КМАФАнМ'}<br><span class="v">${v}</span>`,e));
+      r.addEventListener('mouseleave',hideTT); svg.appendChild(r);
+    });
+    // x labels
+    const xl=el('text',{x:cx,y:H-8,'text-anchor':'middle',class:'axislbl'}); xl.textContent=d.m; svg.appendChild(xl);
+  });
+  // baseline bottom panel
+  svg.appendChild(el('line',{x1:padL,y1:botY+botH,x2:W-padR,y2:botY+botH,stroke:css('--grid'),'stroke-width':1}));
+  const cap=el('text',{x:padL,y:botY-8,class:'axislbl'}); cap.textContent='сигналы, шт'; svg.appendChild(cap);
+}
+
+/* ---------- render all ---------- */
+function drawAll(){
+  renderKPIs();
+  const acc=css('--accent');
+  hBar('ch-ceh', DATA.byCeh.map(d=>({label:d.ceh, v:d.n, color:acc, sub:d.sessions+' сессий',
+    tip:`<b>${d.ceh}</b><br><span class="v">${d.n}</span> проб · <span class="v">${d.sessions}</span> сессий отбора`})),
+    {labelW:120, rowH:32});
+  hBar('ch-elev', DATA.elevByCeh.map(d=>({label:d.ceh, v:d.n,
+    color:d.ceh==='ЦМП №9'?css('--warning'):css('--c-blue'),
+    tip:`<b>${d.ceh}</b><br><span class="v">${d.n}</span> проб с повышенным КМАФАнМ`})),
+    {labelW:100, rowH:38, unit:'проб'});
+  const tot=1915;
+  hBar('ch-fill', DATA.fill.map(d=>({label:d.k, v:d.n, color:d.n===0?css('--critical'):(d.n<100?css('--serious'):css('--c-aqua')),
+    sub:(d.n/tot*100).toFixed(d.n<100?1:0)+'%',
+    tip:`<b>${d.k}</b><br>тестировалось в <span class="v">${d.n}</span> пробах (${(d.n/tot*100).toFixed(1)}%)`})),
+    {labelW:96, rowH:30, fmt:r=>r.v});
+  renderMonthly();
+  // fail table
+  const tb = document.querySelector('#fail-table tbody');
+  const dkey = d => { const [dd,mm] = d.split('.'); return mm+dd; };
+  const failsSorted = DATA.fails.slice().sort((a,b)=> dkey(b.date).localeCompare(dkey(a.date)));
+  tb.innerHTML = failsSorted.map(f=>{
+    const cls = f.ind==='Listeria' ? 'crit' : 'warn';
+    return `<tr><td class="num">${f.date}</td><td>${f.ceh}</td><td>${f.loc}</td>
+      <td class="mono">${f.ind}</td><td><span class="pill ${cls}">обнаружено</span></td></tr>`;
+  }).join('');
+}
+drawAll();
+const mq = matchMedia('(prefers-color-scheme: dark)');
+mq.addEventListener && mq.addEventListener('change', drawAll);
+new MutationObserver(drawAll).observe(document.documentElement, {attributes:true, attributeFilter:['data-theme']});
+</script>

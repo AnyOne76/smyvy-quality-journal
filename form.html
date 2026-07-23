@@ -1,0 +1,464 @@
+<title>Смывы · единая форма ввода</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:#eef1f1; --surface:#ffffff; --surface-2:#f7f9f9; --ink:#0e1618; --ink-2:#566360;
+    --muted:#8a938f; --grid:#e4e8e7; --hairline:rgba(14,22,24,0.10); --accent:#0e8f86;
+    --accent-soft:#dcefed; --good:#0a8f24; --good-soft:#e0f2e3; --warning:#d98a00;
+    --warn-soft:#fbf0dc; --critical:#cf3b3b; --crit-soft:#fbe4e4;
+    --shadow:0 1px 2px rgba(14,22,24,.04),0 6px 20px rgba(14,22,24,.05);
+    --mono:ui-monospace,"SF Mono","Cascadia Mono","Segoe UI Mono",Menlo,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){:root:where(:not([data-theme="light"])){
+    color-scheme:dark; --plane:#0b0e0e; --surface:#15191a; --surface-2:#1b2021; --ink:#edf2f1;
+    --ink-2:#9aa6a2; --muted:#77817d; --grid:#262c2c; --hairline:rgba(255,255,255,0.10);
+    --accent:#2bbcb0; --accent-soft:#123230; --good:#2eb043; --good-soft:#122b18; --warning:#e6a521;
+    --warn-soft:#2e2410; --critical:#e05a5a; --crit-soft:#2e1616;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.4);}}
+  :root[data-theme="dark"]{color-scheme:dark; --plane:#0b0e0e; --surface:#15191a; --surface-2:#1b2021;
+    --ink:#edf2f1; --ink-2:#9aa6a2; --muted:#77817d; --grid:#262c2c; --hairline:rgba(255,255,255,0.10);
+    --accent:#2bbcb0; --accent-soft:#123230; --good:#2eb043; --good-soft:#122b18; --warning:#e6a521;
+    --warn-soft:#2e2410; --critical:#e05a5a; --crit-soft:#2e1616;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.4);}
+  :root[data-theme="light"]{color-scheme:light;}
+
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;line-height:1.5;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 90px;}
+
+  header{border-bottom:1px solid var(--hairline);background:var(--surface);position:sticky;top:0;z-index:30;}
+  .bar{max-width:1080px;margin:0 auto;padding:13px 24px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;}
+  .logo{width:30px;height:30px;border-radius:7px;background:var(--accent);display:grid;place-items:center;flex:none;}
+  .logo svg{width:18px;height:18px;}
+  .brand b{font-size:14px;font-weight:650;display:block;letter-spacing:-.01em;}
+  .brand span{font-size:11.5px;color:var(--muted);}
+  .hbtn{margin-left:auto;display:flex;gap:8px;}
+  button{font-family:var(--sans);cursor:pointer;}
+  .ghost{background:var(--surface-2);border:1px solid var(--hairline);color:var(--ink);
+    font-size:12.5px;font-weight:550;padding:8px 13px;border-radius:9px;display:inline-flex;gap:6px;align-items:center;}
+  .ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .ghost svg{width:15px;height:15px;}
+  a.ghost{text-decoration:none;}
+  #nav-stats{background:var(--accent-soft);border-color:transparent;color:var(--accent);}
+  .navbadge{font-family:var(--mono);font-size:10.5px;font-weight:700;background:var(--accent);color:#fff;
+    border-radius:999px;padding:1px 6px;min-width:16px;text-align:center;}
+  @media (max-width:640px){.ghost span:not(.navbadge){display:none;}}
+
+  .hero{padding:40px 0 22px;}
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin:0 0 12px;}
+  h1{font-size:clamp(26px,3.6vw,38px);line-height:1.06;letter-spacing:-.025em;font-weight:700;margin:0 0 12px;max-width:20ch;}
+  .lede{font-size:16px;color:var(--ink-2);max-width:60ch;margin:0;}
+
+  .card{background:var(--surface);border:1px solid var(--hairline);border-radius:16px;
+    padding:24px;box-shadow:var(--shadow);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .field{display:flex;flex-direction:column;gap:7px;}
+  label.lbl{font-size:12px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);text-transform:uppercase;}
+  label.lbl .req{color:var(--critical);}
+  input,select{font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--surface-2);
+    border:1px solid var(--hairline);border-radius:10px;padding:10px 12px;width:100%;}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent;}
+  select{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a938f' stroke-width='3'><path d='M6 9l6 6 6-6'/></svg>");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;}
+
+  .sub-h{font-size:13px;font-weight:640;margin:26px 0 4px;display:flex;align-items:center;gap:8px;}
+  .sub-h .hint{font-weight:400;color:var(--muted);font-size:12px;}
+
+  /* indicators */
+  .inds{display:flex;flex-direction:column;gap:8px;margin-top:12px;}
+  .ind-row{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:center;
+    padding:10px 12px;border:1px solid var(--hairline);border-radius:11px;background:var(--surface-2);}
+  .ind-row.off{opacity:.5;}
+  .ind-name{font-size:13.5px;font-weight:550;}
+  .ind-name .norm{display:block;font-size:11px;color:var(--muted);font-weight:400;font-family:var(--mono);}
+  .seg{display:inline-flex;background:var(--surface);border:1px solid var(--hairline);border-radius:9px;
+    padding:3px;gap:3px;flex-wrap:wrap;}
+  .seg button{border:none;background:transparent;color:var(--ink-2);font-size:12.5px;font-weight:550;
+    padding:6px 12px;border-radius:6px;white-space:nowrap;}
+  .seg button:hover{color:var(--ink);}
+  .seg button.on[data-v="norm"]{background:var(--good-soft);color:var(--good);}
+  .seg button.on[data-v="bad"]{background:var(--crit-soft);color:var(--critical);}
+  .seg button.on[data-v="skip"]{background:var(--surface-2);color:var(--muted);}
+  .kma{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .kma .mini{width:auto;}
+  .kma input[type=number]{width:74px;text-align:center;}
+  .kma .x{font-family:var(--mono);color:var(--muted);font-size:13px;}
+  .kma .res{font-family:var(--mono);font-size:12px;padding:3px 9px;border-radius:7px;background:var(--surface);
+    border:1px solid var(--hairline);color:var(--ink-2);}
+  .kma .res.over{background:var(--crit-soft);color:var(--critical);border-color:transparent;font-weight:600;}
+  .kma .res.ok{background:var(--good-soft);color:var(--good);border-color:transparent;}
+
+  /* status banner */
+  .banner{margin-top:20px;border-radius:12px;padding:13px 16px;font-size:13.5px;display:flex;
+    align-items:center;gap:10px;font-weight:550;}
+  .banner svg{width:18px;height:18px;flex:none;}
+  .banner.ok{background:var(--good-soft);color:var(--good);}
+  .banner.bad{background:var(--crit-soft);color:var(--critical);}
+
+  .actions{display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;}
+  .primary{background:var(--accent);border:none;color:#fff;font-size:14px;font-weight:600;
+    padding:12px 22px;border-radius:11px;display:inline-flex;gap:8px;align-items:center;}
+  .primary:hover{filter:brightness(1.06);}
+  .primary svg{width:17px;height:17px;}
+  .link{background:none;border:none;color:var(--ink-2);font-size:13px;text-decoration:underline;padding:12px 6px;}
+  .link:hover{color:var(--critical);}
+
+  /* journal */
+  .jhead{display:flex;align-items:baseline;gap:12px;margin:44px 0 14px;flex-wrap:wrap;}
+  .jhead h2{font-size:20px;letter-spacing:-.02em;margin:0;font-weight:680;}
+  .jhead .count{font-family:var(--mono);font-size:12px;color:var(--accent);background:var(--accent-soft);
+    padding:3px 9px;border-radius:6px;}
+  .jhead .exp{margin-left:auto;display:flex;gap:8px;}
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--hairline);border-radius:14px;background:var(--surface);}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:640px;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
+    font-weight:600;padding:12px;border-bottom:1px solid var(--hairline);white-space:nowrap;}
+  td{padding:11px 12px;border-bottom:1px solid var(--hairline);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  td.num{font-family:var(--mono);white-space:nowrap;}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;}
+  .chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;}
+  .chip.norm{background:var(--good-soft);color:var(--good);}
+  .chip.bad{background:var(--crit-soft);color:var(--critical);}
+  .chip.over{background:var(--warn-soft);color:var(--warning);}
+  .del{background:none;border:none;color:var(--muted);font-size:16px;line-height:1;padding:4px 8px;border-radius:6px;}
+  .del:hover{color:var(--critical);background:var(--crit-soft);}
+  .empty{padding:40px;text-align:center;color:var(--muted);font-size:13.5px;}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--ink);color:var(--plane);font-size:13px;font-weight:550;padding:11px 18px;border-radius:11px;
+    box-shadow:0 10px 30px rgba(0,0,0,.3);opacity:0;transition:.25s;pointer-events:none;z-index:50;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (max-width:760px){.grid2{grid-template-columns:1fr;}.ind-row{grid-template-columns:1fr;gap:8px;}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+
+<header>
+  <div class="bar">
+    <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><circle cx="8" cy="8" r="1.1" fill="#fff"/><circle cx="16.5" cy="9.5" r="1.1" fill="#fff"/><circle cx="15" cy="16" r="1.1" fill="#fff"/></svg></div>
+    <div class="brand"><b>Единая форма ввода смывов</b><span>Служба качества · микробиологический контроль</span></div>
+    <div class="hbtn">
+      <button class="ghost" id="nav-journal" title="Журнал за сессию"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg><span>Журнал</span><span id="nav-count" class="navbadge">0</span></button>
+      <a class="ghost" id="nav-stats" href="https://claude.ai/code/artifact/dda4befd-64e0-436a-8d9e-e2c80389f703" target="_blank" rel="noopener" title="Открыть аналитику"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3v18h18M7 15l4-5 3 3 5-7"/></svg><span>Статистика</span></a>
+      <button class="ghost" id="theme-btn" title="Тема"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg></button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="hero">
+    <p class="eyebrow">Один экран вместо 13 вкладок</p>
+    <h1>Внести результат смыва</h1>
+    <p class="lede">Выберите цех — форма сама подставит точки отбора и нужные показатели. Значения выбираются из списка, а не пишутся текстом: одинаковые названия, никаких опечаток, мгновенная проверка на превышение нормы.</p>
+  </div>
+
+  <div class="card">
+    <div class="grid2">
+      <div class="field">
+        <label class="lbl" for="f-date">Дата отбора <span class="req">*</span></label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label class="lbl" for="f-ceh">Цех <span class="req">*</span></label>
+        <select id="f-ceh"><option value="">— выберите цех —</option></select>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:16px">
+      <div class="field">
+        <label class="lbl" for="f-point">Точка отбора <span class="req">*</span></label>
+        <input list="points-list" id="f-point" placeholder="начните вводить или выберите" autocomplete="off">
+        <datalist id="points-list"></datalist>
+      </div>
+      <div class="field">
+        <label class="lbl" for="f-master">Мастер / кто отбирал</label>
+        <input type="text" id="f-master" placeholder="необязательно">
+      </div>
+    </div>
+
+    <div class="sub-h">Показатели <span class="hint" id="ind-hint">— выберите цех, чтобы увидеть перечень —</span></div>
+    <div class="inds" id="inds"></div>
+
+    <div class="banner ok" id="banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
+      <span id="banner-txt">Все показатели в норме</span>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="add-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Добавить в журнал</button>
+      <button class="link" id="reset-btn">Очистить форму</button>
+    </div>
+  </div>
+
+  <div class="jhead" id="journal" style="scroll-margin-top:80px">
+    <h2>Журнал за сессию</h2>
+    <span class="count" id="j-count">0 записей</span>
+    <div class="exp">
+      <button class="ghost" id="csv-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Excel / CSV</button>
+      <button class="ghost" id="json-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 3H6a2 2 0 0 0-2 2v4m0 6v4a2 2 0 0 0 2 2h2m8-16h2a2 2 0 0 1 2 2v4m0 6v4a2 2 0 0 1-2 2h-2"/></svg>JSON</button>
+      <button class="ghost" id="clear-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Очистить всё</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Дата</th><th>Цех</th><th>Точка</th><th>Результаты</th><th>Мастер</th><th></th></tr></thead>
+      <tbody id="j-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const REF = {"order":["Приемка (цех №1)","Сырьевой (цех №2)","СК (цех №3)","Деликатесный (цех №4)","Колбасный (цех №5)","Упаковка и маркировка (цех №7)","Нарезка (цех №8)","ЦМП (цех №9)","Постников","Столовая"],"points":{"Деликатесный (цех №4)":["Инъектор Inject Star BI-424 Cool с фильтрующей станцией,ключ №1","Инъектор Metalguimia Movistick 300,крючок №2","Ледогенератор Maya RVC-6000-E","Массажер ES-2200 №8","Массажер ESC-1200 №9","Массажер Metalguimia RT 1x plus №1","Массажер Metalguimia RT 2x plus №2","Массажер Metalguimia RT 3x plus №3","Массажер Metalguimia RT 4x plus №4","Массажер Metalguimia RT 5x plus №5","Массажер Metalguimia RT 6x plus №6","Массажер Магнум 6000 MAG-6000 SL №7, скребок.","Машина обвязочная FRT-S-G-400 №1","Машина обвязочная FRT-S-G-400 №2","Мешалка Vacona - 1200","Миксер-дозатор для рассола LAKOMAT LM-800 №1","Миксер-дозатор для рассола LAKOMAT LM-800 №2","Петлевязальная машина SCHAD E 85-1 № 1, рабочее место","Петлевязальная машина SCHAD E 85-1 № 1, рабочее место (3)","Петлевязальная машина SCHAD E 85-1 № 2, рабочее место","Петлевязальная машина SCHAD E 85-1 № 3, рабочее место","Петлевязальная машина SCHAD E 85-1 № 3, рабочее место (4)","Петлевязальная машина SCHAD E 85-1 № 4, рабочее место","Петлевязальная машина SCHAD E 85-1 № 5, рабочее место","Руки Архипов","Руки Бахирев","Руки Гескенгиров","Руки Есекенов","Руки Кадыров","Руки Лечманов","Руки Личманов","Руки Малушенко","Руки Мамадалиев","Руки Мехвикулов","Руки Мухитов","Руки Мухитов К.","Руки Новокщенов","Руки Тихонов","Руки Узелков","Руки Фимонин","Руки Южин","Руки рабочих (Бахиров)","Руки рабочих (Имонин)","Руки рабочих (Личманов Ю.)","Руки рабочих (Личманов)","Руки рабочих (Лопасов)","Руки рабочих (Мамадалиев)","Руки рабочих (Мухитов К.)","Руки рабочих (Мухитов С.)","Руки рабочих (Новокшенов П.)","Руки рабочих (Новокщенов)","Руки рабочих (Папасов)","Руки рабочих (Пеньков)","Руки рабочих (Ричманов)","Руки рабочих (не менее 3 сотрудников)","Руки рабочих Личманов","Руки рабочих Новокщенов","Руки сотрудника Архипов Павел","Руки сотрудника Бахирев Андрей","Руки сотрудника Пеньков Николай","Руки сотрудника Южин Алексей","Санитарная одежда (Мамадалиев)","Санитарная одежда (Мухитов К.)","Санитарная одежда (Мухитов С.)","Санитарная одежда (Фесекенов)","Санитарная одежда (Южин)","Санитарная одежда (не менее 3 сотрудников)","Санитарная одежда Личманов","Санитарная одежда Мехрикулов","Санитарная одежда Муртузаев","Санитарная одежда Мухитов","Санитарная одежда Новокщенов","Санитарная одежда Пеньков","Стена","Стены Метал.конструкции","Стол формовщиков № 1","Стол формовщиков № 2","Фартук (Мухитов К.)","Фартук (Мухитов С.)","Фартук Бесекинов","Фартук Лейчманов","Фартук Мамадалиев","Фартук Мехрикулов","Фартук Мусалимов","Фартук Мухитов С.","Фартук Новоксенов"],"Колбасный (цех №5)":["Блокорезка №1","Вак.наполнитель Handmann № 1, СОС.ЛИНИЯ №1.","Вак.наполнитель Handmann №3, Клипсатор Alpina","Вак.наполнитель Handmann №4","Вак.наполнитель Handmann №6","Вак.наполнитель Handmann №7","Весы №1","Весы №2,5","Весы №2.4","Весы №2.5","Волчек-автомат Seydeimann AU200 B","Грузовой подъемник №2","КУТЕР SEDELMAN","КУТЕР №1","КУТЕР №2","КУТЕР №3","Котел №1","Котел №2","ЛИФТ №12","Ледогенератор № 1","Ледогенератор № 2","Ледогенератор № 3","Ледогенератор № 4","Мешалка","Мешалка SEDELMAN.","Пандус","Просеиватель","Руки рабочих (не менее 3 сотрудников)","Стелаж","Стелажи 2ЭТАЖ","Стелажи ЗАЛ №1","Стелажи ЗАЛ №2","Стелажи ЗАЛ №3","Стена Отделение баланшировки шпига","Стена камера посола","Стены","Стены Камера осадки №1","Трапы","Установки барабаннова типа №1","Установки барабаннова типа №2","Установки барабаннова типа №3","Установки барабаннова типа №4","Формовочный стол №4","Формовочный стол №6","Формовочный стол №7","Шпигорезка Treif Twister120","Эмульситатор","Ящик"],"Нарезка (цех №8)":["Весы (275 линия)","Лента (275 линия)","Стол (275 линия)"],"Постников":["Пекарный цех зона охлаждения стеллаж","Р.4 Воп 11","Руки Веремей Ю.А.","Сан.одежда Веремей Ю.А.","Тара под ряженку","Творожный цех ВК 5","Творожный цех ВК 7"],"Приемка (цех №1)":["Бункер ММО","Корпус ММО","Лента ММО","Линия ММО","Руки рабочих (Евгеньев)","Руки рабочих (Шарипов)","Санпост №1.1","Санпост №1.2","Стены (Помещение производства куриного фарша (1 этаж))","Стены Метал.конструкции (Камера №5 (1 этаж))","Стены Метал.конструкции (Помещение приемки сырья )","Стены Метал.конструкции Двери (Помещение располечивания сырья 1 этаж)"],"СК (цех №3)":["Абдрашитов руки","Альгинатная линия Handtmann VF-616","Артемов руки","Вак.наполнитель Handtmann VF-628 №2","Вак.наполнитель Handtmann №1","Вак.наполнитель Handtmann №3","Весы №3.1","Весы №3.2","Дорожкин руки","Клипсатор Polyclip FCA 160 №1","Клипсатор Polyclip FCA 160 №2","Контейнера под ТКО и УОБО","Куттер Seydelmann","Машина мойки реек","Руки Артемов","Руки Беляев","Руки Дорожкин","Руки Иванов","Руки Рейченков","Руки Рыченков","Руки Табаков","Руки Татарников","Руки Толстых","Руки рабочих (Губаев)","Руки рабочих (Кондаков)","Руки рабочих (Табаков)","Руки рабочих (Толстых)","Руки рабочих (не менее 3 сотрудников)","Санитарная одежда (Губаев)","Санитарная одежда (Дорожкин)","Санитарная одежда (Петров)","Санитарная одежда (Рыченков)","Санитарная одежда (Табаков)","Санитарная одежда (Татарников)","Санитарная одежда (Толстых)","Санитарная одежда (Тольстых)","Санитарная одежда (Усманов)","Санитарная одежда (Хайрулин)","Санитарная одежда (не менее 3 сотрудников)","Санитарная одежда Кочетков","Санитарная одежда Любчинков","Санитарная одежда Татарников","Сейф хранения моющих средств","Сейфы хранения моющих средств","Система барабанного типа для воды с пистолетом","Стеллаж","Стеллажи","Стена","Стенд хранения инвентаря мойки","Стенд хранения инвентаря мойки/ инвентарь","Стены","Стены Метал. Конструкции","Стены Метал. конструкции","Стены Стеллажи Метал. конструкции Ящики под вспом.материалы","Стол","Стол №1","Стол №2","Шпигорезка Treif Argon","Ящики под ТКО и УОБО"],"Столовая":["Вилка","Вилки","Гастроемкость (мармит)","Доска","Ложка","Ложка для салатов","Ложки","Нож","Перчатки Хамидова","Поднос","Руки Ананенко","Руки Хамидова","Смыв со стола раздачи","Смыв собеденного стола (зал пр-во)","Стакан","Стена рядом со столом","Стол","Тарелка для 1 блюда","Тарелка для 2 блюда","Тарелка для салата"],"Сырьевой (цех №2)":["Весы настольные №2","Весы настольные №4","Весы №2.1","Весы №2.2","Весы №2.3","Волчок-автомат AU 200 В","Жиловщик Baader 603","Кольчужные перчатки","Кольчужный фартук","Конвейер № 3 Стол раскройщиков №2","Конвейер №2 Стол раскройщиков №1","Лифт №10","Лифт №11","Лифт №4","Машина для мойки и дезинфекции боксов с ножами KOHLHOFF","Машина для мойки тары Roser TL-235-PS-R","Машина мойки кольчужных перчаток и фартуков","Пила дисковая Jarvis SEC-230-4 №1","Пила дисковая Jarvis SEC-280-4 №2","Пила ленточная №1 КТ-400","Пила ленточная №2 Mado Gmb H D 72175 Domhan","Руки Домрачев","Руки Зуев","Руки Камаев","Руки Леонтьев","Руки Мусалимов","Руки Никитенко","Руки Хусейнов","Руки рабочих (Бузин)","Руки рабочих (Воробьев)","Руки рабочих (Никитенко)","Руки рабочих (Симинский)","Руки рабочих (не менее 3 сотрудников)","Сан одежда Камаев","Сан одежда Мусалимов","Сан. одежда (Машкакиров)","Сан. одежда (Уапкуров)","Сан. одежда (Хусейнов)","Сан. одежда (не менее 3 сотрудников)","Санитарная одежда Канаев","Санитарная одежда Никитенко","Стены","Стол","Стол №1 конвейер (лента)","Стол №1 конвейер (место №1- №5)","Стол №1 конвейер (место №6 - №10)","Стол №1 конвейер (подъемник)","Стол №2 конвейер (лента)","Стол №2 конвейер (место №1- №8)","Стол №2 конвейер (место №9 - №16)","Стол №3 (место №1 - №5)","Стол №3 (место №6 - №10)","Столы №4","Столы №5","Столы №6","Трапы","Трапы (помещение мойки тары)","Фартук (Бсембаев)","Фартук (Бузин)","Фартук (Никитенко)","Фартук (Симинский)","Фаршемешалка Fatosa AV900","Шкуросъемка №1","Шкуросъемка №2","Шкуросъемка №3","Ящики для м/с"],"Упаковка и маркировка (цех №7)":["1) 16. Нож №1","10) 25. Рабочая лента - термоформер 1","11) 26. Ящик для готового продукта","12) 27. Весы для продукции","13) 28. Сканер для продукции","14) 29. Панель управления весовым комплексом","15) 30. Рама №1 для готовой продукции","16) 31. Стол для готовой продукции","17) 32. Оборудование Inotek для нарезки","18) 33. Зона укладки Термоформер №2","19) 34. Бокс для ножей","2) 17. Оператор вакуумной упаковки, Мацеля Л.И. - руки","20) 35. Пленка для готовой продукции","3) 18. Оператор вакуумной упаковки - спецодежда","4) 19. Термоформер кнопка запуска","5) 20. Термоформер панель управления","6) 21. Рейки для продукции","7) 22. Стакан для реек","8) 23. Термоформер - рабочая поверхность","9) 24. Термоформер 1 - лоток","ULMA №1 Бицерба КТ","Весы","Гильотина","Гильотина нож","Гильотина нож (Повтор)","Гильотина стол","Гильотина стол (Повтор)","Доска","Доска 1","Доска 2","Зона контроля упаковки нарезки буженины","Лента Флоу бэк","Лента Флоу бэк (Повтор)","Линия","Машина для удаления клипс с колбасных батонов INOTEC EC №2","Машина для упаковки в пленку \"Флоубек\"","Мультивак №6 (нарезка 300г) Бицерба КТ 8.0","Мультивак №7 (нарезка 400г) Бицерба КТ 7.9","Новый Этикеровщик","Опак №9 (упаковка деликатесов) Бицерба КТ 7.9","Пила","Сос делитель №1,№2,№3,№4","ТФ№1 Бицерба КТ 7.1","ТФ№2 Бицерба КТ 7.2","ТФ№3, Бицерба КТ 7.3","Таурфеникс Хенкельман","Термоформер 7.2","Ульма 1 Стол 1","Ульма лента","Упаковка"],"ЦМП (цех №9)":["Henkelman falkon 80","Автомат для производства котлет FORMATIC","Автомат для сухой панировки DEIGHTON Мод. 200w weir econocrumb","Вак.наполнитель Handtmann VF-608","Вакона","Вакуумный наполнитель","Варочный котел KW-250E","Весовой Комплекс Бицерба GLP-W ;№25 (упаковка)","Весовой Комплекс Бицерба GLP-W ;№26 (отгрузка)","Волчок","Волчок KONETEOLLISUUSИ Мод. LM - 82А","Волчок Seydelmann AE 130/3B","Котлетный автомат","Массажер","Массажер ES-800","Мешалка с опрокидывателем VAKONA ESK 150 STL","Мясорубка","Мясорубка волчок","Овощерезка \"robot coupe\" мод. CL50 E","Пила ленточная мод. МКВ 754","Плита электрическая ПЭ","Руки рабочих","Руки рабочих (не менее 3 сотрудников)","Руки рабочих Тютюнова","Стол","Стол 11","Стол № 10","Стол № 11","Стол № 9","Стол №10","Стол №11","Стол №9","Тендерайзер","Упаковка котлет REEPACK REE-Eco","Упаковочная машина MINIPACK RP 40 № 7473","Упаковочная машина ULMA TSA 540","Упаковочный автомат Reetrey 20 VGT","Упаковщик Olimpus Vac","Фаршемешалка Fatosa 300 liter AV 300","Шкуросъемная машина RST 800-PICLO","Шпритц"]},"inds":{"Деликатесный (цех №4)":["КМАФАнМ","БГКП","Proteus","Salmonella","Listeria","Staph"],"Колбасный (цех №5)":["КМАФАнМ","БГКП","Proteus","Salmonella","Listeria","Staph"],"Нарезка (цех №8)":["КМАФАнМ","БГКП"],"Постников":["КМАФАнМ","БГКП","Salmonella","Listeria","Staph"],"Приемка (цех №1)":["КМАФАнМ","БГКП","Salmonella","Listeria"],"СК (цех №3)":["КМАФАнМ","БГКП","Proteus","Salmonella","Listeria","Staph"],"Столовая":["КМАФАнМ","БГКП","Staph","Плесень"],"Сырьевой (цех №2)":["КМАФАнМ","БГКП","Proteus","Salmonella","Listeria","Staph"],"Упаковка и маркировка (цех №7)":["КМАФАнМ","БГКП","Proteus","Listeria"],"ЦМП (цех №9)":["КМАФАнМ","БГКП","Proteus","Salmonella","Listeria"]}};
+
+const IND_ALL = ["КМАФАнМ","БГКП","Proteus","Salmonella","Listeria","Staph","Плесень","Дрожжи"];
+const KMA_LIMIT = 1000;
+const $ = s => document.querySelector(s);
+const store = "smyvy_journal_v1";
+let journal = [];
+try { journal = JSON.parse(localStorage.getItem(store) || "[]"); } catch(e) { journal = []; }
+
+/* ---- nav to journal ---- */
+$("#nav-journal").addEventListener("click", () => {
+  document.getElementById("journal").scrollIntoView({behavior:"smooth", block:"start"});
+});
+
+/* ---- theme toggle ---- */
+$("#theme-btn").addEventListener("click", () => {
+  const cur = document.documentElement.getAttribute("data-theme");
+  const dark = cur ? cur === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+});
+
+/* ---- populate цеха ---- */
+const cehSel = $("#f-ceh");
+REF.order.forEach(c => { const o = document.createElement("option"); o.value = c; o.textContent = c; cehSel.appendChild(o); });
+$("#f-date").valueAsDate = new Date();
+
+/* ---- indicator state ---- */
+let indState = {}; // name -> {mode:'norm'|'bad'|'skip', mant, exp, below}
+
+function buildIndicators(ceh){
+  const used = (REF.inds[ceh] || []);
+  const box = $("#inds"); box.innerHTML = ""; indState = {};
+  $("#ind-hint").textContent = ceh ? `цех тестирует: ${used.join(", ")}` : "— выберите цех, чтобы увидеть перечень —";
+  if(!ceh) return;
+  IND_ALL.forEach(name => {
+    const active = used.includes(name);
+    const row = document.createElement("div");
+    row.className = "ind-row" + (active ? "" : " off");
+    if(name === "КМАФАнМ"){
+      indState[name] = active ? {mode:"norm", below:true, mant:1.5, exp:2} : {mode:"skip"};
+      row.innerHTML = `<div class="ind-name">КМАФАнМ<span class="norm">лимит 1×10³ КОЕ/см²</span></div>
+        <div class="kma">
+          <div class="seg" data-ind="КМАФАнМ" data-kind="mode">
+            <button data-v="norm" data-m="below">менее порога</button>
+            <button data-v="num" data-m="value">точное значение</button>
+            <button data-v="skip" data-m="skip">—</button>
+          </div>
+          <span class="kma-num" style="display:none;align-items:center;gap:6px">
+            <input type="number" step="0.1" min="0" class="k-mant" value="1.5"> <span class="x">× 10^</span>
+            <input type="number" step="1" min="0" class="k-exp mini" style="width:56px" value="2">
+          </span>
+          <span class="res ok" data-res>150 КОЕ</span>
+        </div>`;
+    } else {
+      indState[name] = {mode: active ? "norm" : "skip"};
+      row.innerHTML = `<div class="ind-name">${name}<span class="norm">не допускается</span></div>
+        <div class="seg" data-ind="${name}" data-kind="qual">
+          <button data-v="norm">н/о (норма)</button>
+          <button data-v="bad">обнаружено</button>
+          <button data-v="skip">— не тест.</button>
+        </div>`;
+    }
+    box.appendChild(row);
+  });
+  syncSegs(); recalc();
+}
+
+function syncSegs(){
+  document.querySelectorAll(".seg").forEach(seg => {
+    const ind = seg.dataset.ind, st = indState[ind]; if(!st) return;
+    seg.querySelectorAll("button").forEach(b => {
+      let key = b.dataset.v;
+      let on = false;
+      if(seg.dataset.kind === "mode"){
+        on = (st.mode==="norm" && b.dataset.m==="below") || (st.mode==="num" && b.dataset.m==="value") || (st.mode==="skip" && b.dataset.m==="skip");
+        b.classList.toggle("on", on);
+        b.dataset.v = (b.dataset.m==="skip")?"skip":(b.dataset.m==="below"?"norm":"norm");
+      } else {
+        on = st.mode === key; b.classList.toggle("on", on);
+      }
+    });
+    if(seg.dataset.kind==="mode"){
+      const numWrap = seg.parentElement.querySelector(".kma-num");
+      if(numWrap) numWrap.style.display = st.mode==="num" ? "inline-flex" : "none";
+    }
+  });
+}
+
+$("#inds").addEventListener("click", e => {
+  const btn = e.target.closest("button"); if(!btn) return;
+  const seg = btn.closest(".seg"); const ind = seg.dataset.ind; const st = indState[ind];
+  if(seg.dataset.kind === "mode"){
+    const m = btn.dataset.m;
+    st.mode = m==="skip" ? "skip" : (m==="below" ? "norm" : "num");
+  } else { st.mode = btn.dataset.v; }
+  syncSegs(); recalc();
+});
+$("#inds").addEventListener("input", e => {
+  if(e.target.classList.contains("k-mant")) indState["КМАФАнМ"].mant = parseFloat(e.target.value)||0;
+  if(e.target.classList.contains("k-exp")) indState["КМАФАнМ"].exp = parseInt(e.target.value)||0;
+  recalc();
+});
+
+function kmaValue(){
+  const st = indState["КМАФАнМ"]; if(!st || st.mode==="skip") return null;
+  if(st.mode==="norm") return {koe: st.mant*Math.pow(10,st.exp), below:true};
+  return {koe: st.mant*Math.pow(10,st.exp), below:false};
+}
+
+function recalc(){
+  // kma readout
+  const kv = kmaValue();
+  const resEl = document.querySelector('[data-res]');
+  if(resEl && kv){
+    const over = !kv.below && kv.koe > KMA_LIMIT;
+    resEl.textContent = Math.round(kv.koe).toLocaleString("ru") + " КОЕ";
+    resEl.className = "res " + (over ? "over" : "ok");
+  } else if(resEl){ resEl.textContent = "—"; resEl.className="res"; }
+  // banner
+  const bads = [], overs = [];
+  Object.entries(indState).forEach(([n,s]) => { if(s.mode==="bad") bads.push(n); });
+  if(kv && !kv.below && kv.koe > KMA_LIMIT) overs.push("КМАФАнМ");
+  const b = $("#banner"), t = $("#banner-txt");
+  if(bads.length || overs.length){
+    b.className = "banner bad";
+    b.querySelector("svg").innerHTML = '<path d="M12 9v4m0 4h.01M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>';
+    let msg = [];
+    if(bads.length) msg.push("несоответствие: " + bads.join(", "));
+    if(overs.length) msg.push("превышение норматива КМАФАнМ");
+    t.textContent = "⚠ " + msg.join(" · ");
+  } else {
+    b.className = "banner ok";
+    b.querySelector("svg").innerHTML = '<path d="M20 6 9 17l-5-5"/>';
+    t.textContent = "Все заполненные показатели в норме";
+  }
+}
+
+cehSel.addEventListener("change", () => {
+  const ceh = cehSel.value;
+  const dl = $("#points-list"); dl.innerHTML = "";
+  (REF.points[ceh]||[]).forEach(p => { const o=document.createElement("option"); o.value=p; dl.appendChild(o); });
+  $("#f-point").value = "";
+  buildIndicators(ceh);
+});
+
+/* ---- add / build result string ---- */
+function resultCells(){
+  const out = {};
+  const kv = kmaValue();
+  Object.entries(indState).forEach(([n,s]) => {
+    if(n==="КМАФАнМ"){
+      if(!kv){ out[n]="—"; return; }
+      out[n] = kv.below ? `менее ${indState[n].mant} х 10*${indState[n].exp}` : `${indState[n].mant} х 10*${indState[n].exp}`;
+    } else {
+      out[n] = s.mode==="norm" ? "н/о" : s.mode==="bad" ? "обнаружено" : "—";
+    }
+  });
+  return {cells: out, kv};
+}
+
+$("#add-btn").addEventListener("click", () => {
+ try {
+  const date = $("#f-date").value, ceh = cehSel.value, point = $("#f-point").value.trim();
+  if(!date || !ceh || !point){ toast("Заполните дату, цех и точку отбора"); return; }
+  if(!Object.keys(indState).length) buildIndicators(ceh);
+  const {cells, kv} = resultCells();
+  const tested = Object.values(cells).some(v => v!=="—");
+  if(!tested){ toast("Отметьте хотя бы один показатель"); return; }
+  const lastId = journal.length ? journal[journal.length-1].id : 0;
+  const rec = { id: lastId+1, date, ceh, point, master: $("#f-master").value.trim(),
+    cells, kma: kv ? {koe: kv.below?null:Math.round(kv.koe)} : null,
+    ts: new Date().toISOString() };
+  journal.push(rec); render(); save();
+  toast("Запись добавлена в журнал");
+  $("#f-point").value = ""; $("#f-master").value = "";
+  buildIndicators(ceh);
+ } catch(err){ toast("Ошибка: " + (err && err.message ? err.message : err)); }
+});
+
+$("#reset-btn").addEventListener("click", () => { $("#f-point").value=""; $("#f-master").value="";
+  if(cehSel.value) buildIndicators(cehSel.value); });
+
+/* ---- render journal ---- */
+function statusOf(rec){
+  const bad = Object.entries(rec.cells).filter(([n,v]) => v==="обнаружено").map(([n])=>n);
+  const over = rec.kma && rec.kma.koe && rec.kma.koe > KMA_LIMIT;
+  return {bad, over};
+}
+function render(){
+  const body = $("#j-body");
+  $("#j-count").textContent = journal.length + " " + plural(journal.length);
+  $("#nav-count").textContent = journal.length;
+  if(!journal.length){ body.innerHTML = `<tr><td colspan="6" class="empty">Записей пока нет. Заполните форму выше и нажмите «Добавить в журнал».</td></tr>`; return; }
+  body.innerHTML = journal.slice().reverse().map(r => {
+    const {bad, over} = statusOf(r);
+    const chips = [];
+    Object.entries(r.cells).forEach(([n,v]) => {
+      if(v==="обнаружено") chips.push(`<span class="chip bad">${n}: обнаружено</span>`);
+    });
+    if(over) chips.push(`<span class="chip over">КМАФАнМ ${r.kma.koe.toLocaleString("ru")}</span>`);
+    if(!chips.length) chips.push(`<span class="chip norm">норма</span>`);
+    const d = r.date.split("-").reverse().join(".");
+    return `<tr><td class="num">${d}</td><td>${esc(r.ceh)}</td><td>${esc(r.point)}</td>
+      <td><div class="chips">${chips.join("")}</div></td><td>${esc(r.master||"—")}</td>
+      <td><button class="del" data-id="${r.id}" title="Удалить">✕</button></td></tr>`;
+  }).join("");
+}
+$("#j-body").addEventListener("click", e => {
+  const b = e.target.closest(".del"); if(!b) return;
+  journal = journal.filter(r => r.id != b.dataset.id); save(); render();
+});
+
+/* ---- export ---- */
+const FULL_INDS = ["КМАФАнМ","БГКП","Proteus","Salmonella","Listeria","Staph","Плесень","Дрожжи"];
+$("#csv-btn").addEventListener("click", () => {
+  if(!journal.length){ toast("Журнал пуст"); return; }
+  const head = ["Дата","Цех","Точка отбора",...FULL_INDS,"Мастер","Статус"];
+  const rows = journal.map(r => {
+    const {bad,over} = statusOf(r);
+    const st = bad.length ? "несоответствие" : over ? "превышение" : "норма";
+    const cells = FULL_INDS.map(n => r.cells[n] ?? "—");
+    return [r.date.split("-").reverse().join("."), r.ceh, r.point, ...cells, r.master||"", st];
+  });
+  const csv = [head, ...rows].map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join(";")).join("\r\n");
+  download("﻿"+csv, "Смывы_ввод.csv", "text/csv;charset=utf-8");
+  toast("Файл выгружен — откроется в Excel");
+});
+$("#json-btn").addEventListener("click", () => {
+  if(!journal.length){ toast("Журнал пуст"); return; }
+  download(JSON.stringify(journal, null, 2), "Смывы_ввод.json", "application/json");
+});
+$("#clear-btn").addEventListener("click", () => {
+  if(!journal.length) return;
+  if(confirm("Удалить все записи журнала за сессию?")){ journal=[]; save(); render(); }
+});
+
+function download(text, name, type){
+  const blob = new Blob([text], {type}); const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href=url; a.download=name; a.click(); URL.revokeObjectURL(url);
+}
+function save(){ try { localStorage.setItem(store, JSON.stringify(journal)); } catch(e) {} }
+function esc(s){ return String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function plural(n){ const a=n%10,b=n%100; return (a===1&&b!==11)?"запись":(a>=2&&a<=4&&(b<10||b>=20))?"записи":"записей"; }
+let toTimer;
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show");
+  clearTimeout(toTimer); toTimer=setTimeout(()=>t.classList.remove("show"), 2400); }
+
+render();
+</script>

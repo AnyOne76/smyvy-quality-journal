@@ -1,0 +1,17 @@
+# Секреты и данные сервера — НИКОГДА не коммитить
+.secret
+*.db
+smyvy_prod.db
+
+# Python
+__pycache__/
+*.pyc
+
+# Временные файлы разработки
+_*.js
+_*.cjs
+_*.mjs
+_*.txt
+_*.json
+stream.log
+*.log
