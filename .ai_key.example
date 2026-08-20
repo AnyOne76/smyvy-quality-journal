@@ -1,0 +1,5 @@
+# Вставьте сюда API-ключ DeepSeek одной строкой (без кавычек и пробелов).
+# Затем скопируйте этот файл как .ai_key
+#
+# Ключ: https://platform.deepseek.com/api_keys
+# Файл .ai_key в git не попадает (.gitignore).

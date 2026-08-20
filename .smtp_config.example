@@ -1,0 +1,8 @@
+{
+  "host": "smtp.gmail.com",
+  "port": 465,
+  "user": "smyvy.admin.mpz@gmail.com",
+  "password": "ПАРОЛЬ_ПРИЛОЖЕНИЯ_GMAIL",
+  "from_email": "smyvy.admin.mpz@gmail.com",
+  "from_name": "Смывы Мясницкий Ряд"
+}

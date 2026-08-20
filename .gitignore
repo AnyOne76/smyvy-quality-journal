@@ -1,17 +1,22 @@
-# Секреты и данные сервера — НИКОГДА не коммитить
+# Секреты и данные — не коммитить
 .secret
+.ai_key
+.admin_seed
+.smtp_config
 *.db
 smyvy_prod.db
+smyvy_app.db
 
 # Python
 __pycache__/
 *.pyc
 
-# Временные файлы разработки
+# Временные файлы
 _*.js
 _*.cjs
 _*.mjs
 _*.txt
 _*.json
+_*.py
 stream.log
 *.log

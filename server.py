@@ -28,6 +28,7 @@ import secrets
 import sqlite3
 import getpass
 import datetime
+from pathlib import Path
 from datetime import timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -40,6 +41,11 @@ PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 SESSION_TTL = 12 * 3600          # сколько живёт сессия (сек)
 PBKDF2_ITERS = 240_000
 FRONTEND = os.path.join(BASE, "smyvy.html")
+
+
+def latest_excel():
+    files = sorted(Path(BASE).glob("07. Результаты смывов 2026*.xlsx"))
+    return str(files[-1]) if files else os.path.join(BASE, "07. Результаты смывов 2026.xlsx")
 
 INDICATORS = ["КМАФАнМ", "БГКП", "Proteus", "Salmonella", "Listeria", "Staph", "Плесень", "Дрожжи"]
 ROLES = ("viewer", "master", "quality", "admin")
@@ -361,7 +367,7 @@ class Handler(BaseHTTPRequestHandler):
 def cmd_init():
     init_schema()
     # импорт истории из Excel (если есть)
-    xlsx = os.path.join(BASE, "07. Результаты смывов 2026.xlsx")
+    xlsx = latest_excel()
     imported = 0
     if os.path.exists(xlsx):
         imported = import_excel(xlsx)
