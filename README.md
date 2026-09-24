@@ -43,7 +43,7 @@ python app_server.py
 При новой регистрации письмо уходит **всем активным администраторам** (email = логин учётки).
 
 1. Скопируйте `.smtp_config.example` → `.smtp_config`
-2. Укажите пароль приложения Gmail (или другой SMTP)
+2. По умолчанию — корпоративный SMTP-релей `10.0.4.70:25` без логина (как validationOnTT / documents_conveyer / hr_passport). При необходимости поправьте `from_email`.
 3. Проверка: `python app_server.py testmail`
 
 Файл `.smtp_config` в `.gitignore` — в репозиторий не попадает.
@@ -81,5 +81,5 @@ python app_server.py
 |---|---|
 | `.secret` | ключ подписи сессий (создаётся автоматически) |
 | `.ai_key` | ключ DeepSeek |
-| `.smtp_config` | SMTP-пароль |
+| `.smtp_config` | SMTP (host/port/from; пароль опционален) |
 | `*.db` | локальные базы |

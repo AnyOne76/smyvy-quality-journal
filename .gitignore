@@ -20,3 +20,6 @@ _*.json
 _*.py
 stream.log
 *.log
+
+# Локальный граф знаний
+graphify-out/

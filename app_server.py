@@ -70,10 +70,13 @@ SYSTEM = {
 MAXTOK = {"chat": 1500, "report": 3500, "alert": 600}
 
 # ---------- почта (уведомления администратору) ----------
-SMTP_FROM = "smyvy.admin.mpz@gmail.com"
+# Корпоративный SMTP-релей (как validationOnTT / documents_conveyer / hr_passport):
+# 10.0.4.70:25 без логина, TLS выкл.
+SMTP_FROM = "smyvy@fmmr.market"
 SMTP_FROM_NAME = "Смывы Мясницкий Ряд"
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 465
+SMTP_HOST = "10.0.4.70"
+SMTP_PORT = 25
+SMTP_USE_TLS = False
 
 
 def smtp_config():
@@ -81,27 +84,36 @@ def smtp_config():
     cfg = {
         "host": os.environ.get("SMYVY_SMTP_HOST", SMTP_HOST),
         "port": int(os.environ.get("SMYVY_SMTP_PORT", str(SMTP_PORT))),
-        "user": os.environ.get("SMYVY_SMTP_USER", SMTP_FROM),
-        "password": os.environ.get("SMYVY_SMTP_PASSWORD"),
+        "user": os.environ.get("SMYVY_SMTP_USER", ""),
+        "password": os.environ.get("SMYVY_SMTP_PASSWORD", ""),
         "from_email": os.environ.get("SMYVY_SMTP_FROM", SMTP_FROM),
         "from_name": os.environ.get("SMYVY_SMTP_FROM_NAME", SMTP_FROM_NAME),
+        "use_tls": os.environ.get("SMYVY_SMTP_USE_TLS", str(SMTP_USE_TLS)).lower()
+                   in ("1", "true", "yes"),
     }
     p = os.path.join(BASE, ".smtp_config")
     if os.path.exists(p):
         try:
             file_cfg = json.loads(open(p, encoding="utf-8").read())
-            for k in ("host", "user", "password", "from_email", "from_name"):
+            for k in ("host", "from_email", "from_name"):
                 if k in file_cfg and file_cfg[k]:
+                    cfg[k] = file_cfg[k]
+            # user/password допускают пустую строку (релей без AUTH)
+            for k in ("user", "password"):
+                if k in file_cfg and file_cfg[k] is not None:
                     cfg[k] = file_cfg[k]
             if file_cfg.get("port"):
                 cfg["port"] = int(file_cfg["port"])
+            if "use_tls" in file_cfg:
+                cfg["use_tls"] = bool(file_cfg["use_tls"])
         except Exception:
             pass
     return cfg
 
 
 def smtp_ready():
-    return bool((smtp_config().get("password") or "").strip())
+    """Готовность: задан host. Пароль не обязателен (корпоративный релей без AUTH)."""
+    return bool((smtp_config().get("host") or "").strip())
 
 
 def admin_emails():
@@ -120,17 +132,32 @@ def _mail_when():
 
 def _send_mail(to_addrs, subject, body):
     cfg = smtp_config()
-    pw = (cfg.get("password") or "").strip()
-    if not pw or not to_addrs:
+    host = (cfg.get("host") or "").strip()
+    if not host or not to_addrs:
         return False
+    user = (cfg.get("user") or "").strip()
+    pw = (cfg.get("password") or "").strip()
     msg = MIMEText(body, "plain", "utf-8")
     msg["Subject"] = subject
     msg["From"] = formataddr((cfg["from_name"], cfg["from_email"]))
     msg["To"] = ", ".join(to_addrs)
-    ctx = ssl.create_default_context()
-    with smtplib.SMTP_SSL(cfg["host"], cfg["port"], context=ctx, timeout=30) as s:
-        s.login(cfg["user"], pw)
-        s.sendmail(cfg["from_email"], to_addrs, msg.as_string())
+    port = int(cfg["port"])
+    use_tls = bool(cfg.get("use_tls"))
+    # Порт 465 + TLS → SMTP_SSL; иначе обычный SMTP (релей :25) или STARTTLS
+    if use_tls and port == 465:
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL(host, port, context=ctx, timeout=30) as s:
+            if user:
+                s.login(user, pw)
+            s.sendmail(cfg["from_email"], to_addrs, msg.as_string())
+    else:
+        with smtplib.SMTP(host, port, timeout=30) as s:
+            if use_tls:
+                ctx = ssl.create_default_context()
+                s.starttls(context=ctx)
+            if user:
+                s.login(user, pw)
+            s.sendmail(cfg["from_email"], to_addrs, msg.as_string())
     return True
 
 
@@ -613,7 +640,7 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "testmail":
         seed_admin()
         if not smtp_ready():
-            print("SMTP не настроен. Создайте .smtp_config с паролем приложения Gmail.")
+            print("SMTP не настроен. Создайте .smtp_config (см. .smtp_config.example).")
             sys.exit(1)
         to = admin_emails()
         if not to:
