@@ -16,12 +16,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from parser import INDICATORS, parse_workbook
+from parser import INDICATORS, journal_sheet_titles, parse_workbook
 
 
 ROOT = Path(__file__).resolve().parent
 HTML_PATH = ROOT / "smyvy.html"
-DEFAULT_GLOB = "07. Результаты смывов 2026*.xlsx"
+DEFAULT_GLOB = "*Результаты смывов*.xlsx"
 IND_ORDER = list(INDICATORS.keys())
 LIMIT = 1000.0
 
@@ -35,8 +35,26 @@ def pick_source() -> Path:
     return files[-1]
 
 
-def build_payload(df: pd.DataFrame) -> tuple[dict, dict]:
-    cehs = list(dict.fromkeys(df["цех"].dropna().astype(str)))
+def existing_cehs(html: str) -> list[str]:
+    match = re.search(r'"cehs":(\[.*?\])', html)
+    if not match:
+        return []
+    return json.loads(match.group(1))
+
+
+def ordered_cehs(current: list[str], found: list[str]) -> list[str]:
+    """Старые цеха остаются на своих номерах, новые листы добавляются в конец."""
+    cehs = list(current)
+    known = {name.casefold() for name in cehs}
+    for name in found:
+        name = str(name).strip()
+        if name and name.casefold() not in known:
+            cehs.append(name)
+            known.add(name.casefold())
+    return cehs
+
+
+def build_payload(df: pd.DataFrame, cehs: list[str]) -> tuple[dict, dict]:
     ceh_index = {name: i for i, name in enumerate(cehs)}
 
     probes = []
@@ -125,7 +143,10 @@ def replace_block(html: str, hist: dict, ref: dict) -> str:
 def main() -> None:
     src = pick_source()
     df = parse_workbook(str(src))
-    hist, ref = build_payload(df)
+    html = HTML_PATH.read_text(encoding="utf-8")
+    found = journal_sheet_titles(str(src))
+    cehs = ordered_cehs(existing_cehs(html), found)
+    hist, ref = build_payload(df, cehs)
 
     html = HTML_PATH.read_text(encoding="utf-8")
     updated = replace_block(html, hist, ref)

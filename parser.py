@@ -68,6 +68,39 @@ def classify(indicator, raw):
     return "норма"
 
 
+def _journal_columns(ws):
+    headers = [_norm(ws.cell(1, c).value) for c in range(1, (ws.max_column or 0) + 1)]
+    date_col = loc_col = None
+    ind_cols = {}
+    for i, h in enumerate(headers, start=1):
+        hl = h.lower()
+        if date_col is None and "дата" in hl:
+            date_col = i
+        if loc_col is None and "место" in hl:
+            loc_col = i
+        for ind, syns in INDICATORS.items():
+            if ind in ind_cols:
+                continue
+            if any(sy in hl for sy in syns):
+                ind_cols[ind] = i
+                break
+    return date_col, loc_col, ind_cols
+
+
+def journal_sheet_titles(path):
+    """Названия листов-журналов, включая новые пустые."""
+    wb = openpyxl.load_workbook(path, data_only=True)
+    titles = []
+    for ws in wb.worksheets:
+        title = ws.title.strip()
+        if not title or title.lower() in SKIP_SHEETS:
+            continue
+        date_col, loc_col, ind_cols = _journal_columns(ws)
+        if date_col and loc_col and ind_cols:
+            titles.append(title)
+    return titles
+
+
 def parse_workbook(path):
     """Читает Excel и возвращает длинную (tidy) таблицу: одна строка = один показатель одной пробы."""
     wb = openpyxl.load_workbook(path, data_only=True)
@@ -75,26 +108,12 @@ def parse_workbook(path):
     for ws in wb.worksheets:
         if ws.title.strip().lower() in SKIP_SHEETS:
             continue
-        headers = [_norm(ws.cell(1, c).value) for c in range(1, ws.max_column + 1)]
-        date_col = loc_col = None
-        ind_cols = {}
-        for i, h in enumerate(headers, start=1):
-            hl = h.lower()
-            if date_col is None and "дата" in hl:
-                date_col = i
-            if loc_col is None and "место" in hl:
-                loc_col = i
-            for ind, syns in INDICATORS.items():
-                if ind in ind_cols:
-                    continue
-                if any(sy in hl for sy in syns):
-                    ind_cols[ind] = i
-                    break
+        date_col, loc_col, ind_cols = _journal_columns(ws)
         if not date_col or not loc_col or not ind_cols:
             continue  # это не журнал цеха
 
         cur_date = None
-        for r in range(2, ws.max_row + 1):
+        for r in range(2, (ws.max_row or 1) + 1):
             dv = ws.cell(r, date_col).value
             if dv not in (None, ""):
                 cur_date = dv

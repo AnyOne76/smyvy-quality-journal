@@ -4,7 +4,7 @@
 
 Безопасность (серверная, не в браузере):
   • Регистрация и вход; пароли — PBKDF2-SHA256 с солью.
-  • Роли: pending (по умолчанию после регистрации, без прав), viewer, master, quality, admin.
+  • Роли: pending (по умолчанию после регистрации, без прав), viewer, quality, admin.
   • Сессии — подписанная HMAC-cookie (HttpOnly, SameSite=Strict).
   • Аудит: регистрация, вход, смена ролей, блокировки.
   • Уведомление всем активным admin по email при новой заявке (SMTP, .smtp_config).
@@ -24,9 +24,12 @@ import base64
 import hashlib
 import secrets
 import sqlite3
+import shutil
 import smtplib
 import ssl
 import datetime
+import time
+import threading
 import urllib.request
 import urllib.error
 from datetime import timezone
@@ -38,12 +41,14 @@ BASE = os.path.dirname(os.path.abspath(__file__))
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
+BACKUP_DIR = os.path.join(BASE, "backups")
+BACKUP_HOUR = 20
 SECRET_PATH = os.path.join(BASE, ".secret")
 SESSION_TTL = 12 * 3600
 
-ROLES = ("pending", "viewer", "master", "quality", "admin")
+ROLES = ("pending", "viewer", "quality", "admin")
 ROLE_TITLES = {"pending": "Ожидает роли", "viewer": "Наблюдатель",
-               "master": "Мастер", "quality": "Служба качества", "admin": "Администратор"}
+               "quality": "Служба качества", "admin": "Администратор"}
 
 # ---------- DeepSeek ----------
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
@@ -230,6 +235,18 @@ def init_schema():
       role TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS audit(
       id INTEGER PRIMARY KEY, ts TEXT NOT NULL, user TEXT, action TEXT NOT NULL, detail TEXT);
+    CREATE TABLE IF NOT EXISTS deleted_probes(
+      id INTEGER PRIMARY KEY,
+      deleted_at TEXT NOT NULL,
+      deleted_by TEXT NOT NULL,
+      deleted_by_name TEXT NOT NULL,
+      probe_id TEXT,
+      probe_date TEXT,
+      workshop TEXT,
+      point TEXT,
+      status TEXT,
+      master TEXT,
+      indicators TEXT);
     """)
     cols = {r["name"] for r in con.execute("PRAGMA table_info(users)")}
     if "full_name" not in cols:
@@ -241,6 +258,104 @@ def init_schema():
 
 def now():
     return datetime.datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def clip_text(value, limit):
+    text = re.sub(r"\s+", " ", str(value or "")).strip()
+    return text[:limit]
+
+
+def _name_key(value):
+    return str(value or "").strip().lower()
+
+
+def _merge_name_list(left, right):
+    out = []
+    seen = set()
+    for name in list(left or []) + list(right or []):
+        key = _name_key(name)
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(str(name).strip())
+    return out
+
+
+def _merge_named_lists(left, right):
+    merged = {}
+    for src in (left, right):
+        if not isinstance(src, dict):
+            continue
+        for key, names in src.items():
+            label = str(key)
+            merged[label] = _merge_name_list(merged.get(label), names if isinstance(names, list) else [])
+    return merged
+
+
+def _foreman_names(value):
+    if isinstance(value, list):
+        return value
+    if isinstance(value, dict):
+        names = []
+        for item in value.values():
+            if isinstance(item, list):
+                names.extend(item)
+        return names
+    return []
+
+
+def _merge_catalog(prev, incoming):
+    prev = prev if isinstance(prev, dict) else {}
+    incoming = incoming if isinstance(incoming, dict) else {}
+    return {
+        "cehs": _merge_name_list(prev.get("cehs"), incoming.get("cehs")),
+        "points": _merge_named_lists(prev.get("points"), incoming.get("points")),
+        "foremen": _merge_name_list(_foreman_names(prev.get("foremen")), _foreman_names(incoming.get("foremen"))),
+    }
+
+
+def _entry_key(entry):
+    eid = str(entry.get("id") or "").strip()
+    if eid:
+        return "id:" + eid
+    return "raw:" + json.dumps([entry.get("d"), entry.get("c"), entry.get("p"), entry.get("s")], ensure_ascii=False, sort_keys=True)
+
+
+def _indicators_filled(entry):
+    return any(ch != "." for ch in str(entry.get("s") or ""))
+
+
+def _merge_entry(prev, incoming):
+    out = dict(prev)
+    out.update(incoming)
+    if _indicators_filled(prev) and not _indicators_filled(incoming):
+        out["s"] = prev.get("s")
+        if "k" in prev:
+            out["k"] = prev.get("k")
+        if prev.get("stage"):
+            out["stage"] = prev.get("stage")
+    for key in ("foreman", "master", "p", "d"):
+        if not str(incoming.get(key) or "").strip() and str(prev.get(key) or "").strip():
+            out[key] = prev.get(key)
+    return out
+
+
+def _merge_journal(prev_entries, incoming_entries):
+    merged = []
+    index = {}
+    for source in (prev_entries, incoming_entries):
+        if not isinstance(source, list):
+            continue
+        for entry in source:
+            if not isinstance(entry, dict):
+                continue
+            key = _entry_key(entry)
+            if key in index:
+                merged[index[key]] = _merge_entry(merged[index[key]], entry)
+            else:
+                index[key] = len(merged)
+                merged.append(entry)
+    return merged
 
 
 def audit(user, action, detail=""):
@@ -406,6 +521,11 @@ class Handler(SimpleHTTPRequestHandler):
     # --- GET: статика ---
     def do_GET(self):
         p = self.path.split("?")[0]
+        if p in ("/", "/input", "/journal", "/statistics", "/ai", "/users",
+                 "/vvod", "/zhurnal", "/statistika", "/ii", "/polzovateli"):
+            qs = ("?" + self.path.split("?", 1)[1]) if "?" in self.path else ""
+            self.path = "/smyvy.html" + qs
+            p = "/smyvy.html"
         if p == "/api/me":
             u = self._user()
             return self._json({"login": u["login"], "role": u["role"], "full_name": u["full_name"] or u["login"]} if u else {"login": None})
@@ -418,6 +538,8 @@ class Handler(SimpleHTTPRequestHandler):
                     for r in con.execute("SELECT * FROM users ORDER BY id")]
             con.close()
             return self._json({"users": rows, "roles": [{"k": k, "t": ROLE_TITLES[k]} for k in ROLES]})
+        if p == "/api/deleted-probes":
+            return self._list_deleted_probes()
         return super().do_GET()
 
     # --- POST ---
@@ -446,7 +568,87 @@ class Handler(SimpleHTTPRequestHandler):
             return self._change_pw()
         if p == "/api/ai":
             return self._ai()
+        if p == "/api/deleted-probes":
+            return self._log_deleted_probe()
+        if p == "/api/backup":
+            return self._save_journal_backup()
         return self._err("не найдено", 404)
+
+    def _save_journal_backup(self):
+        u = self._user()
+        if not u or u["role"] == "pending":
+            return self._err("нужен вход", 401)
+        b = self._body()
+        if not isinstance(b, dict) or not isinstance(b.get("entries"), list):
+            return self._err("неверный запрос")
+        entries = b.get("entries")
+        if len(entries) > 20000:
+            return self._err("слишком много записей", 422)
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        day = datetime.date.today().isoformat()
+        path = os.path.join(BACKUP_DIR, "smyvy-journal-%s.json" % day)
+        prev = {"entries": [], "catalog": {}}
+        if os.path.exists(path):
+            try:
+                with open(path, encoding="utf-8") as f:
+                    loaded = json.load(f)
+                if isinstance(loaded, dict):
+                    prev = loaded
+            except Exception:
+                prev = {"entries": [], "catalog": {}}
+        merged = _merge_journal(prev.get("entries") or [], entries)
+        catalog = _merge_catalog(prev.get("catalog"), b.get("catalog"))
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"saved_at": now(), "by": u["login"], "entries": merged, "catalog": catalog}, f, ensure_ascii=False)
+        os.replace(tmp, path)
+        return self._json({"ok": True, "count": len(merged)})
+
+    def _list_deleted_probes(self):
+        u = self._user()
+        if not u or u["role"] != "admin":
+            return self._err("нужны права администратора", 403)
+        con = db()
+        rows = con.execute(
+            "SELECT deleted_at, deleted_by, deleted_by_name, probe_date, workshop, point, status, master, indicators "
+            "FROM deleted_probes ORDER BY id DESC LIMIT 500"
+        ).fetchall()
+        con.close()
+        return self._json({"items": [dict(r) for r in rows]})
+
+    def _log_deleted_probe(self):
+        u = self._user()
+        if not u or u["role"] not in ("quality", "admin"):
+            return self._err("нужны права на удаление", 403)
+        b = self._body()
+        if not isinstance(b, dict):
+            return self._err("неверный запрос")
+        probe_date = clip_text(b.get("probe_date"), 40)
+        workshop = clip_text(b.get("workshop"), 200)
+        point = clip_text(b.get("point"), 300)
+        if not probe_date or not workshop or not point:
+            return self._err("в записи нет даты, цеха или точки", 422)
+        con = db()
+        con.execute(
+            "INSERT INTO deleted_probes(deleted_at, deleted_by, deleted_by_name, probe_id, probe_date, workshop, point, status, master, indicators) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (
+                now(),
+                u["login"],
+                u["full_name"] or u["login"],
+                clip_text(b.get("probe_id"), 80),
+                probe_date,
+                workshop,
+                point,
+                clip_text(b.get("status"), 80),
+                clip_text(b.get("master"), 200),
+                clip_text(b.get("indicators"), 2000),
+            ),
+        )
+        con.commit()
+        con.close()
+        audit(u["login"], "delete_probe", "%s · %s · %s" % (probe_date, workshop, point))
+        return self._json({"ok": True})
 
     def _admin_reset_pw(self):
         u = self._user()
@@ -615,9 +817,51 @@ class Handler(SimpleHTTPRequestHandler):
             return self._err("Ошибка ИИ: " + str(e)[:200], 502)
 
 
+def copy_app_db(day):
+    if not os.path.exists(DB_PATH):
+        return
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    dest = os.path.join(BACKUP_DIR, "smyvy-app-%s.db" % day.isoformat())
+    shutil.copy2(DB_PATH, dest)
+
+
+def next_backup_at(now=None):
+    now = now or datetime.datetime.now()
+    target = now.replace(hour=BACKUP_HOUR, minute=0, second=0, microsecond=0)
+    if now >= target:
+        target += datetime.timedelta(days=1)
+    return target
+
+
+def catch_up_db_backup(now=None):
+    now = now or datetime.datetime.now()
+    slot = now.replace(hour=BACKUP_HOUR, minute=0, second=0, microsecond=0)
+    if now >= slot:
+        dest = os.path.join(BACKUP_DIR, "smyvy-app-%s.db" % now.date().isoformat())
+        if not os.path.exists(dest):
+            copy_app_db(now.date())
+        return
+    yesterday = now.date() - datetime.timedelta(days=1)
+    dest = os.path.join(BACKUP_DIR, "smyvy-app-%s.db" % yesterday.isoformat())
+    if not os.path.exists(dest):
+        copy_app_db(yesterday)
+
+
+def backup_at_20_loop():
+    while True:
+        time.sleep((next_backup_at() - datetime.datetime.now()).total_seconds())
+        try:
+            copy_app_db(datetime.date.today())
+        except Exception:
+            pass
+        time.sleep(65)
+
+
 if __name__ == "__main__":
     import sys
     init_schema()
+    catch_up_db_backup()
+    threading.Thread(target=backup_at_20_loop, daemon=True).start()
     # восстановление пароля с ПК:  python app_server.py setpass email@дом пароль
     if len(sys.argv) >= 2 and sys.argv[1] == "setpass":
         if len(sys.argv) < 4:
