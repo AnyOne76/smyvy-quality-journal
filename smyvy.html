@@ -178,6 +178,15 @@
   .catalog-admin{display:grid;gap:8px;max-width:640px;margin:0 0 8px;}
   .catalog-line{display:flex;gap:10px;align-items:center;}
   .catalog-line select{flex:1;min-width:0;}
+  .hidden-box{margin-top:14px;display:grid;gap:8px;}
+  .hidden-head{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;}
+  .hidden-head .link{padding:0;}
+  .hidden-box input{width:100%;}
+  .hidden-scroll{display:grid;gap:6px;max-height:220px;overflow:auto;}
+  .hidden-row{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:8px 10px;border:1px solid var(--hairline);border-radius:10px;background:var(--surface-2);}
+  .hidden-row span{font-size:14px;min-width:0;}
+  .hidden-empty{margin:14px 0 0;color:var(--muted);font-size:13px;}
+  .hidden-scroll .hidden-empty{margin:0;}
   .del:hover{color:var(--critical);background:var(--crit-soft);}
   .rowact{display:flex;gap:2px;justify-content:flex-end;}
   .edt{background:none;border:none;color:var(--muted);padding:4px 7px;border-radius:6px;cursor:pointer;display:grid;place-items:center;}
@@ -410,7 +419,7 @@
 <header>
   <div class="bar">
     <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><circle cx="8" cy="8" r="1.1" fill="#fff"/><circle cx="16.5" cy="9.5" r="1.1" fill="#fff"/><circle cx="15" cy="16" r="1.1" fill="#fff"/></svg></div>
-    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · микробиологический контроль</span></div>
+    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.1</span></div>
     <div class="tabs" role="tablist">
       <a class="tab on" data-tab="input" href="/input"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="t">Ввод</span></a>
       <a class="tab" data-tab="journal" href="/journal"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg><span class="t">Журнал</span><span class="b" id="tab-count">0</span></a>
@@ -665,7 +674,7 @@
     <div class="tbl-wrap"><table><thead><tr><th>Логин</th><th>Роль</th><th>Статус</th><th>Регистрация</th><th></th></tr></thead><tbody id="admin-users"></tbody></table></div>
     <p class="rowcap" id="admin-cap"></p>
     <h2 style="margin:28px 0 8px">Цеха, точки и мастера</h2>
-    <p class="lede" style="font-size:14px;color:var(--ink-2);margin:0 0 14px;max-width:70ch">Удаление убирает название из списков при занесении нового смыва. Записи, которые уже лежат в журнале, остаются.</p>
+    <p class="lede" style="font-size:14px;color:var(--ink-2);margin:0 0 14px;max-width:70ch">Удаление убирает название из списков при занесении нового смыва. Записи, которые уже лежат в журнале, остаются. Если убрали не то, откройте список и найдите название.</p>
     <div class="catalog-admin">
       <label class="lbl" for="adm-ceh">Цех</label>
       <div class="catalog-line"><select id="adm-ceh"></select><button type="button" class="link" id="adm-del-ceh">Удалить цех</button></div>
@@ -673,6 +682,7 @@
       <div class="catalog-line"><select id="adm-point"></select><button type="button" class="link" id="adm-del-point">Удалить точку</button></div>
       <label class="lbl" for="adm-foreman">Мастер цеха</label>
       <div class="catalog-line"><select id="adm-foreman"></select><button type="button" class="link" id="adm-del-foreman">Удалить мастера</button></div>
+      <div id="adm-hidden"></div>
     </div>
     <h2 style="margin:28px 0 8px">Удалённые смывы</h2>
     <p class="lede" style="font-size:14px;color:var(--ink-2);margin:0 0 14px;max-width:70ch">След удаления хранится на сервере. Здесь видно, какой смыв убрали, кто это сделал и в какое время. Вернуть строку в журнал отсюда нельзя.</p>
@@ -726,6 +736,7 @@ const CATALOG_KEY = "smyvy_catalog_v1";
 const FOREMEN = [];
 const HIDDEN_CEHS = [];
 const HIDDEN_POINTS = {};
+const HIDDEN_FOREMEN = [];
 function normName(s){ return String(s||"").replace(/\s+/g," ").trim(); }
 function sameName(a,b){ return normName(a).toLowerCase() === normName(b).toLowerCase(); }
 function saveCatalog(){
@@ -735,7 +746,7 @@ function saveCatalog(){
     const extra = (REF.points[ceh]||[]).filter(p => !base.has(String(p).toLowerCase()));
     if(extra.length) points[ceh] = extra;
   });
-  try { localStorage.setItem(CATALOG_KEY, JSON.stringify({ cehs: CEHS.slice(BASE_CEH_COUNT), points, foremen: FOREMEN, hiddenCehs: HIDDEN_CEHS, hiddenPoints: HIDDEN_POINTS })); } catch(e){}
+  try { localStorage.setItem(CATALOG_KEY, JSON.stringify({ cehs: CEHS.slice(BASE_CEH_COUNT), points, foremen: FOREMEN, hiddenCehs: HIDDEN_CEHS, hiddenPoints: HIDDEN_POINTS, hiddenForemen: HIDDEN_FOREMEN })); } catch(e){}
   scheduleBackup();
 }
 function loadCatalog(){
@@ -777,6 +788,14 @@ function loadCatalog(){
       const name = normName(p);
       if(name && !HIDDEN_POINTS[key].some(x => sameName(x, name))) HIDDEN_POINTS[key].push(name);
     });
+  });
+  HIDDEN_FOREMEN.length = 0;
+  (Array.isArray(raw.hiddenForemen) ? raw.hiddenForemen : []).forEach(name => {
+    const n = normName(name);
+    if(!n || HIDDEN_FOREMEN.some(x => sameName(x, n))) return;
+    HIDDEN_FOREMEN.push(n);
+    const i = FOREMEN.findIndex(x => sameName(x, n));
+    if(i >= 0) FOREMEN.splice(i, 1);
   });
 }
 loadCatalog();
@@ -897,6 +916,88 @@ function renderAdminCatalog(){
   $("#adm-del-ceh").disabled = !cehSelAdm.value;
   $("#adm-del-point").disabled = !pointSel.value;
   $("#adm-del-foreman").disabled = !foremanSel.value;
+  renderHiddenCatalog();
+}
+let hiddenListOpen = false;
+let hiddenQuery = "";
+function hiddenCatalogItems(){
+  const items = [];
+  HIDDEN_CEHS.forEach(name => items.push({ kind:"ceh", ceh:"", name, label:`Цех: ${name}` }));
+  Object.keys(HIDDEN_POINTS).forEach(ceh => {
+    (HIDDEN_POINTS[ceh] || []).forEach(point => items.push({ kind:"point", ceh, name:point, label:`Точка: ${ceh} — ${point}` }));
+  });
+  HIDDEN_FOREMEN.forEach(name => items.push({ kind:"foreman", ceh:"", name, label:`Мастер: ${name}` }));
+  return items;
+}
+function ruNoun(n, one, few, many){
+  const n10 = n % 10, n100 = n % 100;
+  if(n10 === 1 && n100 !== 11) return n + " " + one;
+  if(n10 >= 2 && n10 <= 4 && (n100 < 12 || n100 > 14)) return n + " " + few;
+  return n + " " + many;
+}
+function renderHiddenCatalog(){
+  const box = $("#adm-hidden");
+  if(!box) return;
+  const items = hiddenCatalogItems();
+  if(!items.length){
+    hiddenListOpen = false;
+    hiddenQuery = "";
+    box.className = "";
+    box.innerHTML = `<p class="hidden-empty">Убранных цехов, точек и мастеров нет.</p>`;
+    return;
+  }
+  const cehN = items.filter(it => it.kind === "ceh").length;
+  const pointN = items.filter(it => it.kind === "point").length;
+  const foremanN = items.filter(it => it.kind === "foreman").length;
+  const summary = [
+    cehN ? ruNoun(cehN, "цех", "цеха", "цехов") : "",
+    pointN ? ruNoun(pointN, "точка", "точки", "точек") : "",
+    foremanN ? ruNoun(foremanN, "мастер", "мастера", "мастеров") : ""
+  ].filter(Boolean).join(", ");
+  const q = hiddenQuery.trim().toLowerCase();
+  const shown = (q ? items.filter(it => it.label.toLowerCase().includes(q)) : items).slice().reverse();
+  const rows = shown.length
+    ? shown.map(it => `<div class="hidden-row"><span>${esc(it.label)}</span><button type="button" class="link" data-restore="${it.kind}" data-ceh="${esc(it.ceh)}" data-name="${esc(it.name)}">Вернуть</button></div>`).join("")
+    : `<p class="hidden-empty">Ничего не найдено</p>`;
+  const typing = document.activeElement && document.activeElement.id === "adm-hidden-q";
+  const caret = typing ? document.activeElement.selectionStart : null;
+  box.className = "hidden-box";
+  box.innerHTML = `<div class="hidden-head"><span>Убрано из списков: ${esc(summary)}</span><button type="button" class="link" data-hidden-toggle>${hiddenListOpen ? "Скрыть" : "Показать"}</button></div>` +
+    (hiddenListOpen ? `<input id="adm-hidden-q" placeholder="Найти цех, точку или мастера" value="${esc(hiddenQuery)}"><div class="hidden-scroll">${rows}</div>` : "");
+  if(typing){
+    const input = $("#adm-hidden-q");
+    if(input){
+      input.focus();
+      if(caret != null) input.setSelectionRange(caret, caret);
+    }
+  }
+}
+function restoreAdminCeh(name){
+  if(!can("admin") || !name || !isCehHidden(name)) return;
+  unhideCeh(name);
+  saveCatalog();
+  fillCehSelect();
+  renderCehBar();
+  renderAdminCatalog();
+  toast("Цех возвращён в список", {ok:true});
+}
+function restoreAdminPoint(ceh, point){
+  if(!can("admin") || !ceh || !point || !isPointHidden(ceh, point)) return;
+  unhidePoint(ceh, point);
+  if(cehSel.value && sameName(cehSel.value, ceh)) curPoints = visiblePoints(ceh);
+  saveCatalog();
+  renderAdminCatalog();
+  toast("Точка возвращена в список", {ok:true});
+}
+function restoreAdminForeman(name){
+  if(!can("admin") || !name) return;
+  const i = HIDDEN_FOREMEN.findIndex(p => sameName(p, name));
+  if(i < 0) return;
+  const stored = HIDDEN_FOREMEN.splice(i, 1)[0];
+  if(!FOREMEN.some(p => sameName(p, stored))) FOREMEN.push(stored);
+  saveCatalog();
+  renderAdminCatalog();
+  toast("Мастер возвращён в список", {ok:true});
 }
 function deleteAdminCeh(){
   if(!can("admin")) return;
@@ -931,7 +1032,8 @@ function deleteAdminForeman(){
   if(!name) return;
   if(!confirm(`Удалить мастера «${name}» из списка?`)) return;
   const i = FOREMEN.findIndex(p => sameName(p, name));
-  if(i >= 0) FOREMEN.splice(i, 1);
+  const stored = i >= 0 ? FOREMEN.splice(i, 1)[0] : name;
+  if(!HIDDEN_FOREMEN.some(p => sameName(p, stored))) HIDDEN_FOREMEN.push(stored);
   saveCatalog();
   renderAdminCatalog();
   toast("Мастер убран из списка", {ok:true});
@@ -940,6 +1042,24 @@ $("#adm-ceh").addEventListener("change", renderAdminCatalog);
 $("#adm-del-ceh").addEventListener("click", deleteAdminCeh);
 $("#adm-del-point").addEventListener("click", deleteAdminPoint);
 $("#adm-del-foreman").addEventListener("click", deleteAdminForeman);
+$("#adm-hidden").addEventListener("click", e => {
+  if(e.target.closest("[data-hidden-toggle]")){
+    hiddenListOpen = !hiddenListOpen;
+    renderHiddenCatalog();
+    if(hiddenListOpen){ const input = $("#adm-hidden-q"); if(input) input.focus(); }
+    return;
+  }
+  const btn = e.target.closest("[data-restore]");
+  if(!btn) return;
+  if(btn.dataset.restore === "ceh") restoreAdminCeh(btn.dataset.name);
+  else if(btn.dataset.restore === "point") restoreAdminPoint(btn.dataset.ceh, btn.dataset.name);
+  else if(btn.dataset.restore === "foreman") restoreAdminForeman(btn.dataset.name);
+});
+$("#adm-hidden").addEventListener("input", e => {
+  if(e.target.id !== "adm-hidden-q") return;
+  hiddenQuery = e.target.value;
+  renderHiddenCatalog();
+});
 async function renderAdmin(){
   renderAdminCatalog();
   renderDeleted();
@@ -1490,6 +1610,13 @@ function ensureForeman(raw){
   if(!name) return name;
   const existing = FOREMEN.find(p => sameName(p, name));
   if(existing) return existing;
+  const hidden = HIDDEN_FOREMEN.find(p => sameName(p, name));
+  if(hidden){
+    HIDDEN_FOREMEN.splice(HIDDEN_FOREMEN.findIndex(p => sameName(p, hidden)), 1);
+    FOREMEN.push(hidden);
+    saveCatalog();
+    return hidden;
+  }
   FOREMEN.push(name);
   saveCatalog();
   return name;

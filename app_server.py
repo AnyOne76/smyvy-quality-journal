@@ -38,6 +38,7 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+APP_VERSION = "1.1"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
@@ -307,10 +308,27 @@ def _foreman_names(value):
 def _merge_catalog(prev, incoming):
     prev = prev if isinstance(prev, dict) else {}
     incoming = incoming if isinstance(incoming, dict) else {}
+    incoming_hidden = incoming.get("hiddenForemen")
+    hidden_foremen = _merge_name_list(prev.get("hiddenForemen"), incoming_hidden if isinstance(incoming_hidden, list) else [])
+    if isinstance(incoming_hidden, list):
+        incoming_hidden_keys = {_name_key(name) for name in incoming_hidden}
+        incoming_visible_keys = {_name_key(name) for name in _foreman_names(incoming.get("foremen"))}
+        hidden_foremen = [
+            name for name in hidden_foremen
+            if _name_key(name) in incoming_hidden_keys or _name_key(name) not in incoming_visible_keys
+        ]
+    hidden_keys = {_name_key(name) for name in hidden_foremen}
+    foremen = [
+        name for name in _merge_name_list(_foreman_names(prev.get("foremen")), _foreman_names(incoming.get("foremen")))
+        if _name_key(name) not in hidden_keys
+    ]
     return {
         "cehs": _merge_name_list(prev.get("cehs"), incoming.get("cehs")),
         "points": _merge_named_lists(prev.get("points"), incoming.get("points")),
-        "foremen": _merge_name_list(_foreman_names(prev.get("foremen")), _foreman_names(incoming.get("foremen"))),
+        "foremen": foremen,
+        "hiddenCehs": _merge_name_list(prev.get("hiddenCehs"), incoming.get("hiddenCehs")),
+        "hiddenPoints": _merge_named_lists(prev.get("hiddenPoints"), incoming.get("hiddenPoints")),
+        "hiddenForemen": hidden_foremen,
     }
 
 
@@ -907,7 +925,7 @@ if __name__ == "__main__":
     n = con.execute("SELECT COUNT(*) c FROM users").fetchone()["c"]
     con.close()
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
-    print("Смывы: http://%s:%d/smyvy.html" % (HOST, PORT))
+    print("Смывы %s: http://%s:%d/smyvy.html" % (APP_VERSION, HOST, PORT))
     print("Пользователей в базе: %d%s" % (n, "  (первый зарегистрированный станет админом)" if n == 0 else ""))
     print("Ключ ИИ (DeepSeek): " + ("есть" if ai_key() else "нет — создайте файл .ai_key"))
     print("Почта (%s): %s" % (SMTP_FROM, "настроена" if smtp_ready() else "нет — создайте .smtp_config"))
