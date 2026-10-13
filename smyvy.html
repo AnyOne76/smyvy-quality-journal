@@ -359,8 +359,10 @@
   /* экран входа */
   .lock{position:fixed;inset:0;z-index:100;background:var(--plane);display:flex;align-items:center;justify-content:center;padding:24px;}
   .lock.hidden{display:none;}
-  .lock-box{background:var(--surface);border:1px solid var(--hairline);border-radius:18px;box-shadow:var(--shadow);
+  .filepick{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;}
+  .lock-box{visibility:hidden;background:var(--surface);border:1px solid var(--hairline);border-radius:18px;box-shadow:var(--shadow);
     padding:34px 30px;width:100%;max-width:360px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;}
+  .lock.ask .lock-box{visibility:visible;}
   .lock-logo{width:52px;height:52px;border-radius:13px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;margin-bottom:8px;}
   .lock-logo svg{width:30px;height:30px;}
   .lock-box h2{font-size:20px;font-weight:700;letter-spacing:-.02em;margin:0;}
@@ -419,7 +421,7 @@
 <header>
   <div class="bar">
     <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><circle cx="8" cy="8" r="1.1" fill="#fff"/><circle cx="16.5" cy="9.5" r="1.1" fill="#fff"/><circle cx="15" cy="16" r="1.1" fill="#fff"/></svg></div>
-    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.1</span></div>
+    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.2</span></div>
     <div class="tabs" role="tablist">
       <a class="tab on" data-tab="input" href="/input"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="t">Ввод</span></a>
       <a class="tab" data-tab="journal" href="/journal"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg><span class="t">Журнал</span><span class="b" id="tab-count">0</span></a>
@@ -480,7 +482,7 @@
       <button class="ghost" id="j-csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Excel / CSV</button>
       <button class="ghost" id="j-backup" title="Сохранить резервную копию введённых записей"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Копия</button>
       <button class="ghost" id="j-restore" title="Восстановить записи из копии"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg>Восстановить</button>
-      <input type="file" id="j-restore-file" accept=".json,application/json" style="display:none">
+      <input type="file" id="j-restore-file" accept=".json,application/json" class="filepick" tabindex="-1">
     </div>
     <div class="tbl-wrap"><table><thead><tr><th>Дата</th><th>Цех</th><th>Точка отбора</th><th>Мастер цеха</th><th>Результаты</th><th>Ответственный</th><th></th></tr></thead><tbody id="j-body"></tbody></table></div>
     <p class="rowcap" id="j-cap"></p>
@@ -849,8 +851,8 @@ function setAuthMode(m){
   $("#auth-switch").addEventListener("click", ()=> setAuthMode(m==="register"?"login":"register"));
   A.err.style.color=""; A.err.textContent="";
 }
-function showLogin(){ A.lock.classList.remove("hidden"); A.fields.style.display=""; A.switchRow.style.display=""; A.pending.style.display="none"; try{A.login.focus();}catch(_){} }
-function showPending(){ A.lock.classList.remove("hidden"); A.fields.style.display="none"; A.switchRow.style.display="none"; A.err.textContent=""; A.pending.style.display="block"; A.title.textContent="Ожидание доступа"; A.sub.textContent=""; }
+function showLogin(){ A.lock.classList.remove("hidden"); A.lock.classList.add("ask"); A.fields.style.display=""; A.switchRow.style.display=""; A.pending.style.display="none"; try{A.login.focus();}catch(_){} }
+function showPending(){ A.lock.classList.remove("hidden"); A.lock.classList.add("ask"); A.fields.style.display="none"; A.switchRow.style.display="none"; A.err.textContent=""; A.pending.style.display="block"; A.title.textContent="Ожидание доступа"; A.sub.textContent=""; }
 function enterApp(){
   A.lock.classList.add("hidden"); applyRole();
   const inuser = !!ME.login;
@@ -861,6 +863,8 @@ function enterApp(){
   refreshPendingBadge(true);
   scheduleBackup();
   scheduleBackupAt20();
+  pullJournal();
+  if(!window._journalPoll) window._journalPoll = setInterval(pullJournal, 8000);
 }
 function applyRole(){
   document.querySelector('.tab[data-tab="input"]').style.display = can("input") ? "" : "none";
@@ -1228,16 +1232,60 @@ try { userEntries = JSON.parse(localStorage.getItem(store) || "[]"); } catch(e){
 })();
 function save(){ try { localStorage.setItem(store, JSON.stringify(userEntries)); } catch(e){} scheduleBackup(); }
 let backupTimer = null;
+let journalEpoch = 0;
 function scheduleBackup(){
   if(!SERVER || !ME.login || ME.role==="pending") return;
   clearTimeout(backupTimer);
   backupTimer = setTimeout(sendBackup, 1500);
 }
 async function sendBackup(){
+  const epoch = journalEpoch;
   let catalog = {};
   try { catalog = JSON.parse(localStorage.getItem(CATALOG_KEY) || "{}"); } catch(e){}
-  try { await apiJSON("/api/backup", "POST", { entries: userEntries, catalog }); } catch(e){}
+  try {
+    const res = await apiJSON("/api/backup", "POST", { entries: userEntries, catalog });
+    if(epoch !== journalEpoch || !res.ok) return;
+    applySharedJournal(res.data);
+  } catch(e){}
 }
+function entryStamp(entry){
+  return JSON.stringify([entry.id, entry.d, entry.c, entry.p, entry.s, entry.k, entry.master, entry.foreman, entry.stage, entry.edited_at, entry.edited_by]);
+}
+function applySharedJournal(data, replace){
+  if(!data || !Array.isArray(data.entries)) return;
+  const deleted = new Set((data.deleted_ids || []).map(String));
+  const remote = data.entries.filter(entry => entry && entry.id && !deleted.has(String(entry.id)));
+  const remoteIds = new Set(remote.map(entry => String(entry.id)));
+  const localById = new Map(userEntries.filter(entry => entry && entry.id).map(entry => [String(entry.id), entry]));
+  const next = [];
+  remote.forEach(entry => {
+    const local = localById.get(String(entry.id));
+    if(local && (local.id === editingId || local.id === resultId)) next.push(local);
+    else next.push(entry);
+  });
+  if(!replace) userEntries.forEach(local => {
+    if(!local || !local.id) return;
+    const id = String(local.id);
+    if(deleted.has(id) || remoteIds.has(id)) return;
+    next.push(local);
+  });
+  if(userEntries.map(entryStamp).join("|") === next.map(entryStamp).join("|")) return;
+  userEntries = next;
+  try { localStorage.setItem(store, JSON.stringify(userEntries)); } catch(e){}
+  updateCounts();
+  if($("#v-journal").classList.contains("on")){ renderCehBar(); renderStatusBar(); renderJournal(); }
+  if($("#v-stats").classList.contains("on")) renderStats();
+}
+async function pullJournal(){
+  if(!SERVER || !ME.login || ME.role==="pending") return;
+  const epoch = journalEpoch;
+  try {
+    const res = await apiJSON("/api/journal");
+    if(epoch !== journalEpoch || !res.ok) return;
+    applySharedJournal(res.data);
+  } catch(e){}
+}
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") pullJournal(); });
 function scheduleBackupAt20(){
   if(!SERVER || !ME.login || ME.role==="pending") return;
   const now = new Date();
@@ -1745,7 +1793,7 @@ $("#add-btn").addEventListener("click", () => {
     $(firstEmpty[0]).focus();
     return;
   }
-  const rec = { d:date, c:CEHS.indexOf(ceh), p:point, s:".".repeat(IND.length), stage:"taken", master, foreman, by:ME.login||"", id:"u"+Date.now(), _new:1 };
+  const rec = { d:date, c:CEHS.indexOf(ceh), p:point, s:".".repeat(IND.length), stage:"taken", master, foreman, by:ME.login||"", id:"u"+Date.now().toString(36)+Math.random().toString(36).slice(2, 8), _new:1 };
   userEntries.push(rec); save(); updateCounts(); toast("Проба взята. Не забудьте занести результаты в журнал.", {ok:true, ms:7000});
   $("#f-point").value=""; syncResponsibleField(); syncIndicators();
  } catch(err){ toast("Ошибка: "+(err&&err.message?err.message:err)); }
@@ -2050,24 +2098,73 @@ $("#j-backup").addEventListener("click", () => {
   const payload = JSON.stringify({ app:"smyvy", version:2, count:userEntries.length, entries:userEntries }, null, 1);
   download(payload, "smyvy_backup.json", "application/json");
 });
-$("#j-restore").addEventListener("click", () => $("#j-restore-file").click());
+$("#j-restore").addEventListener("click", () => {
+  const input = $("#j-restore-file");
+  input.value = "";
+  input.click();
+});
+function decodeCopyText(buf){
+  const bytes = new Uint8Array(buf);
+  if(bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4B) return { excel: true, text: "" };
+  let text;
+  if(bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) text = new TextDecoder("utf-16le").decode(bytes);
+  else if(bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) text = new TextDecoder("utf-16be").decode(bytes);
+  else text = new TextDecoder("utf-8").decode(bytes);
+  if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  if(text.includes("\u0000")) text = new TextDecoder("utf-16le").decode(bytes).replace(/^\uFEFF/, "");
+  return { excel: false, text };
+}
+function entriesFromCopy(data){
+  const list = Array.isArray(data) ? data : (data && Array.isArray(data.entries) ? data.entries : null);
+  if(!list) return null;
+  return list.filter(r => r && r.p && (typeof r.s === "string" || Array.isArray(r.s))).map(r => {
+    const entry = Object.assign({}, r);
+    const ceh = Number(entry.c);
+    if(Number.isInteger(ceh)) entry.c = ceh;
+    if(Array.isArray(entry.s)) entry.s = entry.s.join("");
+    if(!entry.id) entry.id = "u"+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    if(entry._new == null) entry._new = 1;
+    return entry;
+  }).filter(r => typeof r.s === "string" && Number.isInteger(r.c));
+}
 $("#j-restore-file").addEventListener("change", e => {
   const file = e.target.files && e.target.files[0]; if(!file) return;
   const reader = new FileReader();
-  reader.onload = () => {
+  reader.onload = async () => {
+    let valid = [];
     try {
-      const data = JSON.parse(reader.result);
-      const list = Array.isArray(data) ? data : (data && Array.isArray(data.entries) ? data.entries : null);
-      if(!list){ toast("Файл не похож на копию журнала"); return; }
-      const valid = list.filter(r => r && typeof r.s==="string" && typeof r.c==="number" && r.p);
-      if(!valid.length){ toast("В копии нет корректных записей"); return; }
-      if(!confirm(`Восстановить ${valid.length} записей из копии? Текущие введённые записи (${userEntries.length}) будут заменены.`)) return;
-      userEntries = valid; save(); updateCounts(); renderJournal();
-      toast(`Восстановлено записей: ${valid.length}`);
-    } catch(err){ toast("Не удалось прочитать файл копии"); }
-    finally { e.target.value = ""; }
+      const decoded = decodeCopyText(reader.result);
+      if(decoded.excel){ toast("Это файл Excel. Кнопка «Восстановить» открывает копию JSON: smyvy_backup.json или smyvy-journal-дата.json"); return; }
+      const data = JSON.parse(decoded.text);
+      valid = entriesFromCopy(data);
+      if(!valid){ toast("Файл «" + file.name + "» не является копией журнала"); return; }
+      if(!valid.length){ toast("В копии нет записей, которые можно восстановить"); return; }
+    } catch(err){
+      toast("Файл «" + file.name + "» не читается как копия журнала");
+      return;
+    } finally { e.target.value = ""; }
+    if(!can("edit")){ toast("Восстанавливать копию могут служба качества и администратор"); return; }
+    if(!confirm(`Восстановить ${valid.length} записей из копии? Текущие введённые записи (${userEntries.length}) будут заменены.`)) return;
+    try {
+      if(SERVER && ME.login && ME.role!=="pending"){
+        journalEpoch++;
+        const epoch = journalEpoch;
+        let catalog = {};
+        try { catalog = JSON.parse(localStorage.getItem(CATALOG_KEY) || "{}"); } catch(err){}
+        const res = await apiJSON("/api/backup", "POST", { entries: valid, catalog, replace: true });
+        if(epoch !== journalEpoch) return;
+        if(!res.ok){ toast("Не удалось восстановить копию"); return; }
+        applySharedJournal(res.data, true);
+        toast(`Восстановлено записей: ${(res.data.entries||[]).length}`, {ok:true});
+        return;
+      }
+      userEntries = valid;
+      try { localStorage.setItem(store, JSON.stringify(userEntries)); } catch(err){}
+      updateCounts(); renderJournal();
+      toast(`Восстановлено записей: ${valid.length}`, {ok:true});
+    } catch(err){ toast("Не удалось восстановить копию"); }
   };
-  reader.readAsText(file);
+  reader.readAsArrayBuffer(file);
 });
 
 async function exportJournalXlsx(){

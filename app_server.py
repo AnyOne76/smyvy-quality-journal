@@ -38,11 +38,13 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
 BACKUP_DIR = os.path.join(BASE, "backups")
+SHARED_JOURNAL = os.path.join(BACKUP_DIR, "smyvy-journal.json")
+JOURNAL_LOCK = threading.Lock()
 BACKUP_HOUR = 20
 SECRET_PATH = os.path.join(BASE, ".secret")
 SESSION_TTL = 12 * 3600
@@ -358,6 +360,82 @@ def _merge_entry(prev, incoming):
     return out
 
 
+def _read_journal_file(path):
+    if not path or not os.path.exists(path):
+        return {"entries": [], "catalog": {}}
+    try:
+        with open(path, encoding="utf-8") as f:
+            loaded = json.load(f)
+        if isinstance(loaded, dict):
+            return loaded
+    except Exception:
+        pass
+    return {"entries": [], "catalog": {}}
+
+
+def _write_journal_file(path, payload):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def _latest_dated_journal():
+    if not os.path.isdir(BACKUP_DIR):
+        return None
+    names = []
+    for name in os.listdir(BACKUP_DIR):
+        if not (name.startswith("smyvy-journal-") and name.endswith(".json")):
+            continue
+        names.append(name)
+    if not names:
+        return None
+    names.sort()
+    return os.path.join(BACKUP_DIR, names[-1])
+
+
+def _load_shared_journal():
+    if os.path.exists(SHARED_JOURNAL):
+        return _read_journal_file(SHARED_JOURNAL)
+    latest = _latest_dated_journal()
+    if latest:
+        return _read_journal_file(latest)
+    return {"entries": [], "catalog": {}}
+
+
+def _deleted_probe_ids():
+    con = db()
+    rows = con.execute(
+        "SELECT probe_id FROM deleted_probes WHERE probe_id IS NOT NULL AND trim(probe_id) != ''"
+    ).fetchall()
+    con.close()
+    return {str(r["probe_id"]) for r in rows}
+
+
+def _without_deleted(entries, deleted_ids):
+    return [entry for entry in entries if str(entry.get("id") or "") not in deleted_ids]
+
+
+def _store_shared_journal(incoming_entries, incoming_catalog, replace=False):
+    with JOURNAL_LOCK:
+        prev = _load_shared_journal()
+        if replace:
+            merged = [entry for entry in incoming_entries if isinstance(entry, dict)]
+        else:
+            merged = _merge_journal(prev.get("entries") or [], incoming_entries)
+        deleted = _deleted_probe_ids()
+        merged = _without_deleted(merged, deleted)
+        if len(merged) > 20000:
+            merged = merged[-20000:]
+        catalog = _merge_catalog(prev.get("catalog"), incoming_catalog)
+        payload = {"saved_at": now(), "entries": merged, "catalog": catalog}
+        _write_journal_file(SHARED_JOURNAL, payload)
+        day = datetime.date.today().isoformat()
+        _write_journal_file(os.path.join(BACKUP_DIR, "smyvy-journal-%s.json" % day), payload)
+        return merged, sorted(deleted)
+
+
 def _merge_journal(prev_entries, incoming_entries):
     merged = []
     index = {}
@@ -558,7 +636,26 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json({"users": rows, "roles": [{"k": k, "t": ROLE_TITLES[k]} for k in ROLES]})
         if p == "/api/deleted-probes":
             return self._list_deleted_probes()
+        if p == "/api/journal":
+            return self._get_shared_journal()
+        if p == "/smyvy.html":
+            return self._send_app_html()
         return super().do_GET()
+
+    def _send_app_html(self):
+        with open(os.path.join(BASE, "smyvy.html"), encoding="utf-8") as f:
+            html = f.read()
+        user = self._user()
+        lock = "lock hidden" if user and user["role"] != "pending" else "lock ask"
+        html = html.replace('<div id="lock" class="lock">', '<div id="lock" class="%s">' % lock, 1)
+        data = html.encode("utf-8")
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.end_headers()
+        self.wfile.write(data)
 
     # --- POST ---
     def do_POST(self):
@@ -602,25 +699,21 @@ class Handler(SimpleHTTPRequestHandler):
         entries = b.get("entries")
         if len(entries) > 20000:
             return self._err("слишком много записей", 422)
-        os.makedirs(BACKUP_DIR, exist_ok=True)
-        day = datetime.date.today().isoformat()
-        path = os.path.join(BACKUP_DIR, "smyvy-journal-%s.json" % day)
-        prev = {"entries": [], "catalog": {}}
-        if os.path.exists(path):
-            try:
-                with open(path, encoding="utf-8") as f:
-                    loaded = json.load(f)
-                if isinstance(loaded, dict):
-                    prev = loaded
-            except Exception:
-                prev = {"entries": [], "catalog": {}}
-        merged = _merge_journal(prev.get("entries") or [], entries)
-        catalog = _merge_catalog(prev.get("catalog"), b.get("catalog"))
-        tmp = path + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"saved_at": now(), "by": u["login"], "entries": merged, "catalog": catalog}, f, ensure_ascii=False)
-        os.replace(tmp, path)
-        return self._json({"ok": True, "count": len(merged)})
+        replace = bool(b.get("replace"))
+        if replace and u["role"] not in ("quality", "admin"):
+            return self._err("нужны права на изменение", 403)
+        merged, deleted_ids = _store_shared_journal(entries, b.get("catalog"), replace)
+        return self._json({"ok": True, "count": len(merged), "entries": merged, "deleted_ids": deleted_ids})
+
+    def _get_shared_journal(self):
+        u = self._user()
+        if not u or u["role"] == "pending":
+            return self._err("нужен вход", 401)
+        with JOURNAL_LOCK:
+            shared = _load_shared_journal()
+            deleted = _deleted_probe_ids()
+            entries = _without_deleted(shared.get("entries") or [], deleted)
+        return self._json({"entries": entries, "deleted_ids": sorted(deleted)})
 
     def _list_deleted_probes(self):
         u = self._user()
