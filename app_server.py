@@ -37,7 +37,7 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "1.4"
+APP_VERSION = "1.4.1"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
@@ -491,6 +491,8 @@ def _save_user_entries(entries):
         payload = dict(entry)
         payload["id"] = eid
         payload.pop("origin", None)
+        if _indicators_filled(payload):
+            payload.pop("stage", None)
         con.execute(
             "INSERT OR REPLACE INTO probes(id, origin, payload) VALUES(?,?,?)",
             (eid, "user", json.dumps(payload, ensure_ascii=False)),
@@ -1216,6 +1218,7 @@ if __name__ == "__main__":
     import sys
     init_schema()
     sync_swabs_into_db()
+    _save_user_entries(_db_entries("user"))
     catch_up_db_backup()
     threading.Thread(target=backup_at_20_loop, daemon=True).start()
     # восстановление пароля с ПК:  python app_server.py setpass email@дом пароль
