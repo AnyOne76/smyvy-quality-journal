@@ -377,6 +377,8 @@
   .auth-switch{font-size:12.5px;color:var(--muted);margin-top:12px;}
   .auth-switch a{color:var(--accent);cursor:pointer;font-weight:600;}
   .pending-msg{font-size:13px;color:var(--ink-2);margin:6px 0 14px;line-height:1.5;}
+  #auth-newpw{flex-direction:column;gap:10px;width:100%;}
+  #auth-newpw .np-out{margin-top:0;background:var(--surface-2);color:var(--ink);border:1px solid var(--hairline);font-size:14px;font-weight:500;padding:10px;}
   #auth-pending button{width:100%;background:var(--surface-2);color:var(--ink);border:1px solid var(--hairline);font-size:14px;padding:10px;border-radius:11px;cursor:pointer;}
   .userchip{display:inline-flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid var(--hairline);border-radius:999px;padding:5px 12px 5px 14px;cursor:pointer;color:var(--ink);}
   .userchip:hover{border-color:var(--critical);}
@@ -416,13 +418,20 @@
       <p class="pending-msg">Учётная запись создана, но роль ещё не назначена. Обратитесь к администратору — доступ откроется после назначения роли.</p>
       <button type="button" id="auth-logout2">Выйти</button>
     </div>
+    <div id="auth-newpw" style="display:none">
+      <input type="password" id="np-old" placeholder="Временный пароль" autocomplete="current-password">
+      <input type="password" id="np-new" placeholder="Новый пароль" autocomplete="new-password">
+      <input type="password" id="np-new2" placeholder="Повторите новый пароль" autocomplete="new-password">
+      <button type="submit" id="np-save">Сохранить пароль</button>
+      <button type="button" class="np-out" id="auth-logout3">Выйти</button>
+    </div>
   </form>
 </div>
 
 <header>
   <div class="bar">
     <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><circle cx="8" cy="8" r="1.1" fill="#fff"/><circle cx="16.5" cy="9.5" r="1.1" fill="#fff"/><circle cx="15" cy="16" r="1.1" fill="#fff"/></svg></div>
-    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.3</span></div>
+    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.4</span></div>
     <div class="tabs" role="tablist">
       <a class="tab on" data-tab="input" href="/input"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="t">Ввод</span></a>
       <a class="tab" data-tab="journal" href="/journal"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg><span class="t">Журнал</span><span class="b" id="tab-count">0</span></a>
@@ -832,8 +841,9 @@ const ROLE_TITLES = {pending:"Ожидает", viewer:"Наблюдатель", 
 const A = {
   lock:$("#lock"), form:$("#auth-form"), name:$("#auth-name"), login:$("#auth-login"), pass:$("#auth-pass"),
   submit:$("#auth-submit"), err:$("#auth-err"), title:$("#auth-title"), sub:$("#auth-sub"),
-  fields:$("#auth-fields"), switchRow:$("#auth-switch-row"), pending:$("#auth-pending")
+  fields:$("#auth-fields"), switchRow:$("#auth-switch-row"), pending:$("#auth-pending"), newpw:$("#auth-newpw")
 };
+let tempPassword = "";
 async function apiJSON(path, method, body){
   const opt = { method:method||"GET", headers:{}, credentials:"same-origin" };
   if(body!==undefined){ opt.headers["Content-Type"]="application/json"; opt.body=JSON.stringify(body); }
@@ -853,8 +863,37 @@ function setAuthMode(m){
   $("#auth-switch").addEventListener("click", ()=> setAuthMode(m==="register"?"login":"register"));
   A.err.style.color=""; A.err.textContent="";
 }
-function showLogin(){ A.lock.classList.remove("hidden"); A.lock.classList.add("ask"); A.fields.style.display=""; A.switchRow.style.display=""; A.pending.style.display="none"; try{A.login.focus();}catch(_){} }
-function showPending(){ A.lock.classList.remove("hidden"); A.lock.classList.add("ask"); A.fields.style.display="none"; A.switchRow.style.display="none"; A.err.textContent=""; A.pending.style.display="block"; A.title.textContent="Ожидание доступа"; A.sub.textContent=""; }
+function showLogin(){ A.lock.classList.remove("hidden"); A.lock.classList.add("ask"); A.fields.style.display=""; A.switchRow.style.display=""; A.pending.style.display="none"; A.newpw.style.display="none"; try{A.login.focus();}catch(_){} }
+function showPending(){ A.lock.classList.remove("hidden"); A.lock.classList.add("ask"); A.fields.style.display="none"; A.switchRow.style.display="none"; A.newpw.style.display="none"; A.err.textContent=""; A.pending.style.display="block"; A.title.textContent="Ожидание доступа"; A.sub.textContent=""; }
+function showNewPassword(){
+  A.lock.classList.remove("hidden"); A.lock.classList.add("ask");
+  A.fields.style.display="none"; A.switchRow.style.display="none"; A.pending.style.display="none";
+  A.newpw.style.display="flex"; A.err.style.color=""; A.err.textContent="";
+  A.title.textContent="Новый пароль";
+  A.sub.textContent="Вы вошли с временным паролем. Придумайте свой, не короче 5 символов.";
+  $("#np-old").style.display = tempPassword ? "none" : "";
+  ["#np-old","#np-new","#np-new2"].forEach(s=>$(s).value="");
+  try{ $(tempPassword ? "#np-new" : "#np-old").focus(); }catch(_){}
+}
+function afterAuth(){
+  if(ME.must_change) showNewPassword();
+  else if(ME.role==="pending") showPending();
+  else enterApp();
+}
+async function saveNewPassword(){
+  const oldp = tempPassword || $("#np-old").value, np = $("#np-new").value;
+  A.err.style.color="";
+  if(!oldp){ A.err.textContent="Введите временный пароль"; return; }
+  if(np.length<5){ A.err.textContent="Новый пароль не короче 5 символов"; return; }
+  if(np!==$("#np-new2").value){ A.err.textContent="Пароли не совпадают"; return; }
+  const {ok,data}=await apiJSON("/api/change-password","POST",{old:oldp,new:np});
+  if(!ok){ A.err.textContent=data.error||"Ошибка"; return; }
+  tempPassword=""; ME.must_change=false;
+  ["#np-old","#np-new","#np-new2"].forEach(s=>$(s).value="");
+  A.newpw.style.display="none"; A.fields.style.display=""; setAuthMode("login");
+  afterAuth();
+  toast("Пароль изменён");
+}
 function enterApp(){
   A.lock.classList.add("hidden"); applyRole();
   const inuser = !!ME.login;
@@ -1179,6 +1218,7 @@ $("#chpw-btn").addEventListener("click", async ()=>{
 });
 A.form.addEventListener("submit", async e=>{
   e.preventDefault();
+  if(A.newpw.style.display!=="none"){ await saveNewPassword(); return; }
   const login=A.login.value.trim().toLowerCase(), pw=A.pass.value, fullName=A.name.value.trim();
   if(!login||!pw){ A.err.style.color=""; A.err.textContent="Введите email и пароль"; return; }
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(login)){ A.err.style.color=""; A.err.textContent="Введите корректный email"; return; }
@@ -1194,18 +1234,20 @@ A.form.addEventListener("submit", async e=>{
     } else {
       const {ok,data}=await apiJSON("/api/login","POST",{login,password:pw});
       if(!ok){ A.err.style.color=""; A.err.textContent=data.error||"Ошибка входа"; return; }
-      ME={login:data.login, role:data.role, full_name:data.full_name||data.login}; A.pass.value="";
-      if(ME.role==="pending") showPending(); else enterApp();
+      ME={login:data.login, role:data.role, full_name:data.full_name||data.login, must_change:!!data.must_change};
+      tempPassword = ME.must_change ? pw : ""; A.pass.value="";
+      afterAuth();
     }
   } catch(_){ A.err.style.color=""; A.err.textContent="Сервер недоступен"; }
   finally{ A.submit.disabled=false; }
 });
 async function logout(){
   try{ await apiJSON("/api/logout","POST",{}); }catch(_){}
-  ME={login:null, role:null, full_name:""}; $("#userchip").style.display="none"; setAuthMode("login"); showLogin();
+  ME={login:null, role:null, full_name:""}; tempPassword=""; $("#userchip").style.display="none"; setAuthMode("login"); showLogin();
 }
 $("#userchip").addEventListener("click", logout);
 $("#auth-logout2").addEventListener("click", logout);
+$("#auth-logout3").addEventListener("click", logout);
 
 (async function initAuth(){
   setAuthMode("login");
@@ -1213,7 +1255,7 @@ $("#auth-logout2").addEventListener("click", logout);
     const {ok,data}=await apiJSON("/api/me");
     if(!ok) throw new Error("no server");
     SERVER=true;
-    if(data.login){ ME={login:data.login, role:data.role, full_name:data.full_name||data.login}; if(ME.role==="pending") showPending(); else enterApp(); }
+    if(data.login){ ME={login:data.login, role:data.role, full_name:data.full_name||data.login, must_change:!!data.must_change}; afterAuth(); }
     else showLogin();
   } catch(_){
     // без сервера: вход отключён — полный доступ к данным, кроме админ-панели

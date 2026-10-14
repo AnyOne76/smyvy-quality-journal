@@ -37,7 +37,7 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "1.3"
+APP_VERSION = "1.4"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
@@ -255,6 +255,8 @@ def init_schema():
     cols = {r["name"] for r in con.execute("PRAGMA table_info(users)")}
     if "full_name" not in cols:
         con.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
+    if "must_change_pw" not in cols:
+        con.execute("ALTER TABLE users ADD COLUMN must_change_pw INTEGER NOT NULL DEFAULT 0")
     con.execute("UPDATE users SET full_name=login WHERE full_name IS NULL OR trim(full_name)=''")
     con.executescript("""
     CREATE TABLE IF NOT EXISTS probes(
@@ -792,6 +794,10 @@ class Handler(SimpleHTTPRequestHandler):
         con.close()
         return row
 
+    def _must_change_pw(self):
+        u = self._user()
+        return bool(u and u["must_change_pw"])
+
     # --- GET: статика ---
     def do_GET(self):
         p = self.path.split("?")[0]
@@ -800,9 +806,11 @@ class Handler(SimpleHTTPRequestHandler):
             qs = ("?" + self.path.split("?", 1)[1]) if "?" in self.path else ""
             self.path = "/smyvy.html" + qs
             p = "/smyvy.html"
+        if p.startswith("/api/") and p != "/api/me" and self._must_change_pw():
+            return self._err("сначала смените временный пароль", 403)
         if p == "/api/me":
             u = self._user()
-            return self._json({"login": u["login"], "role": u["role"], "full_name": u["full_name"] or u["login"]} if u else {"login": None})
+            return self._json({"login": u["login"], "role": u["role"], "full_name": u["full_name"] or u["login"], "must_change": bool(u["must_change_pw"])} if u else {"login": None})
         if p == "/api/users":
             u = self._user()
             if not u or u["role"] != "admin":
@@ -824,7 +832,7 @@ class Handler(SimpleHTTPRequestHandler):
         with open(os.path.join(BASE, "smyvy.html"), encoding="utf-8") as f:
             html = f.read()
         user = self._user()
-        lock = "lock hidden" if user and user["role"] != "pending" else "lock ask"
+        lock = "lock hidden" if user and user["role"] != "pending" and not user["must_change_pw"] else "lock ask"
         html = html.replace('<div id="lock" class="lock">', '<div id="lock" class="%s">' % lock, 1)
         data = html.encode("utf-8")
         self.send_response(200)
@@ -838,6 +846,8 @@ class Handler(SimpleHTTPRequestHandler):
     # --- POST ---
     def do_POST(self):
         p = self.path.split("?")[0]
+        if p not in ("/api/register", "/api/login", "/api/logout", "/api/change-password") and self._must_change_pw():
+            return self._err("сначала смените временный пароль", 403)
         if p == "/api/register":
             return self._register()
         if p == "/api/login":
@@ -974,7 +984,7 @@ class Handler(SimpleHTTPRequestHandler):
             con.close()
             return self._err("пользователь не найден", 404)
         temp = secrets.token_urlsafe(6)
-        con.execute("UPDATE users SET pass_hash=? WHERE id=?", (hash_password(temp), uid))
+        con.execute("UPDATE users SET pass_hash=?, must_change_pw=1 WHERE id=?", (hash_password(temp), uid))
         con.commit()
         con.close()
         audit(u["login"], "reset_password", target["login"])
@@ -992,8 +1002,10 @@ class Handler(SimpleHTTPRequestHandler):
         new = b.get("new") or ""
         if len(new) < 5:
             return self._err("новый пароль не короче 5 символов", 422)
+        if u["must_change_pw"] and new == (b.get("old") or ""):
+            return self._err("новый пароль должен отличаться от временного", 422)
         con = db()
-        con.execute("UPDATE users SET pass_hash=? WHERE id=?", (hash_password(new), u["id"]))
+        con.execute("UPDATE users SET pass_hash=?, must_change_pw=0 WHERE id=?", (hash_password(new), u["id"]))
         con.commit()
         con.close()
         audit(u["login"], "change_password")
@@ -1042,7 +1054,7 @@ class Handler(SimpleHTTPRequestHandler):
             return self._err("неверный логин или пароль", 401)
         audit(login, "login_ok")
         cookie = "sid=%s; Path=/; Max-Age=%d; HttpOnly; SameSite=Strict" % (make_session(row["id"]), SESSION_TTL)
-        return self._json({"login": row["login"], "role": row["role"], "full_name": row["full_name"] or row["login"]}, cookie=cookie)
+        return self._json({"login": row["login"], "role": row["role"], "full_name": row["full_name"] or row["login"], "must_change": bool(row["must_change_pw"])}, cookie=cookie)
 
     def _admin_user(self, what):
         u = self._user()
@@ -1219,7 +1231,7 @@ if __name__ == "__main__":
                         (email, hash_password(newpw), email, "admin", now()))
             print("Создан админ:", email)
         else:
-            con.execute("UPDATE users SET pass_hash=?, active=1 WHERE id=?", (hash_password(newpw), row["id"]))
+            con.execute("UPDATE users SET pass_hash=?, active=1, must_change_pw=0 WHERE id=?", (hash_password(newpw), row["id"]))
             print("Пароль обновлён для:", email)
         con.commit()
         con.close()
