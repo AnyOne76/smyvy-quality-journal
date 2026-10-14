@@ -3,6 +3,7 @@
 .ai_key
 .admin_seed
 .smtp_config
+.backup_dir
 *.db
 smyvy_prod.db
 smyvy_app.db

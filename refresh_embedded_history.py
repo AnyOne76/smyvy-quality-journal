@@ -9,8 +9,10 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import sqlite3
 import sys
 from pathlib import Path
 
@@ -21,6 +23,7 @@ from parser import INDICATORS, journal_sheet_titles, parse_workbook
 
 ROOT = Path(__file__).resolve().parent
 HTML_PATH = ROOT / "smyvy.html"
+DB_PATH = ROOT / "smyvy_app.db"
 DEFAULT_GLOB = "*Результаты смывов*.xlsx"
 IND_ORDER = list(INDICATORS.keys())
 LIMIT = 1000.0
@@ -140,6 +143,44 @@ def replace_block(html: str, hist: dict, ref: dict) -> str:
     return html
 
 
+def hist_probe_id(entry: dict) -> str:
+    raw = "%s|%s|%s" % (entry.get("d") or "", entry.get("c"), entry.get("p") or "")
+    return "h" + hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def upsert_hist_probes(probes: list) -> None:
+    """Пишет старые пробы в базу: новые добавляет, совпавшие обновляет, лишние не удаляет."""
+    con = sqlite3.connect(DB_PATH)
+    try:
+        con.execute(
+            "CREATE TABLE IF NOT EXISTS probes("
+            "id TEXT PRIMARY KEY, origin TEXT NOT NULL, payload TEXT NOT NULL)"
+        )
+        for entry in probes:
+            if not isinstance(entry, dict):
+                continue
+            eid = hist_probe_id(entry)
+            row = con.execute("SELECT origin FROM probes WHERE id=?", (eid,)).fetchone()
+            if row is not None and row[0] != "hist":
+                continue
+            payload = dict(entry)
+            payload["id"] = eid
+            blob = json.dumps(payload, ensure_ascii=False)
+            if row is None:
+                con.execute(
+                    "INSERT INTO probes(id, origin, payload) VALUES(?,?,?)",
+                    (eid, "hist", blob),
+                )
+            else:
+                con.execute(
+                    "UPDATE probes SET payload=? WHERE id=? AND origin='hist'",
+                    (blob, eid),
+                )
+        con.commit()
+    finally:
+        con.close()
+
+
 def main() -> None:
     src = pick_source()
     df = parse_workbook(str(src))
@@ -151,6 +192,7 @@ def main() -> None:
     html = HTML_PATH.read_text(encoding="utf-8")
     updated = replace_block(html, hist, ref)
     HTML_PATH.write_text(updated, encoding="utf-8")
+    upsert_hist_probes(hist["probes"])
 
     probe_count = df.groupby(["цех", "дата", "точка"]).ngroups
     print(f"Источник: {src.name}")
@@ -158,6 +200,7 @@ def main() -> None:
     print(f"Точек: {sum(len(v) for v in ref['points'].values())}")
     print(f"Проб: {probe_count}")
     print("smyvy.html обновлён")
+    print("База обновлена")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@
   • Уведомление всем активным admin по email при новой заявке (SMTP, .smtp_config).
   • Первый зарегистрированный пользователь автоматически становится admin.
 
-Данные журнала пока хранятся в браузере (роли ограничивают интерфейс/действия).
+Журнал смывов хранится в SQLite (роли ограничивают интерфейс/действия).
 ИИ — прокси к DeepSeek (ключ в .ai_key). Всё в стандартной библиотеке Python.
 
 Запуск:  python app_server.py   →  http://127.0.0.1:8000/smyvy.html
@@ -24,7 +24,6 @@ import base64
 import hashlib
 import secrets
 import sqlite3
-import shutil
 import smtplib
 import ssl
 import datetime
@@ -38,13 +37,15 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "1.2"
+APP_VERSION = "1.3"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
 BACKUP_DIR = os.path.join(BASE, "backups")
+BACKUP_DIR_FILE = os.path.join(BASE, ".backup_dir")
 SHARED_JOURNAL = os.path.join(BACKUP_DIR, "smyvy-journal.json")
 JOURNAL_LOCK = threading.Lock()
+JOURNAL_CACHE = {"rev": 0, "payload": None}
 BACKUP_HOUR = 20
 SECRET_PATH = os.path.join(BASE, ".secret")
 SESSION_TTL = 12 * 3600
@@ -255,6 +256,15 @@ def init_schema():
     if "full_name" not in cols:
         con.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
     con.execute("UPDATE users SET full_name=login WHERE full_name IS NULL OR trim(full_name)=''")
+    con.executescript("""
+    CREATE TABLE IF NOT EXISTS probes(
+      id TEXT PRIMARY KEY,
+      origin TEXT NOT NULL,
+      payload TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS app_meta(
+      key TEXT PRIMARY KEY,
+      value TEXT);
+    """)
     con.commit()
     con.close()
 
@@ -346,6 +356,10 @@ def _indicators_filled(entry):
 
 
 def _merge_entry(prev, incoming):
+    prev_at = str(prev.get("edited_at") or "")
+    incoming_at = str(incoming.get("edited_at") or "")
+    if prev_at and (not incoming_at or incoming_at < prev_at):
+        return dict(prev)
     out = dict(prev)
     out.update(incoming)
     if _indicators_filled(prev) and not _indicators_filled(incoming):
@@ -417,23 +431,187 @@ def _without_deleted(entries, deleted_ids):
     return [entry for entry in entries if str(entry.get("id") or "") not in deleted_ids]
 
 
+def _meta_get(key):
+    con = db()
+    row = con.execute("SELECT value FROM app_meta WHERE key=?", (key,)).fetchone()
+    con.close()
+    return row["value"] if row else ""
+
+
+def _meta_set(key, value):
+    con = db()
+    con.execute("INSERT INTO app_meta(key, value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, value))
+    con.commit()
+    con.close()
+
+
+def _probe_id(entry):
+    eid = str(entry.get("id") or "").strip()
+    if eid:
+        return eid
+    raw = "%s|%s|%s" % (entry.get("d") or "", entry.get("c"), entry.get("p") or "")
+    return "h" + hashlib.sha1(raw.encode("utf-8")).hexdigest()[:16]
+
+
+def _rows_to_entries(rows):
+    out = []
+    for row in rows:
+        try:
+            item = json.loads(row["payload"])
+        except Exception:
+            continue
+        if isinstance(item, dict):
+            item["origin"] = row["origin"]
+            item["id"] = row["id"]
+            out.append(item)
+    return out
+
+
+def _db_entries(origin=None):
+    con = db()
+    if origin:
+        rows = con.execute("SELECT id, origin, payload FROM probes WHERE origin=?", (origin,)).fetchall()
+    else:
+        rows = con.execute("SELECT id, origin, payload FROM probes").fetchall()
+    con.close()
+    return _rows_to_entries(rows)
+
+
+def _save_user_entries(entries):
+    con = db()
+    con.execute("DELETE FROM probes WHERE origin='user'")
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        eid = _probe_id(entry)
+        if eid.startswith("h") and not str(entry.get("id") or "").startswith("u"):
+            continue
+        payload = dict(entry)
+        payload["id"] = eid
+        payload.pop("origin", None)
+        con.execute(
+            "INSERT OR REPLACE INTO probes(id, origin, payload) VALUES(?,?,?)",
+            (eid, "user", json.dumps(payload, ensure_ascii=False)),
+        )
+    con.commit()
+    con.close()
+
+
+def _load_catalog_db():
+    raw = _meta_get("catalog")
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except Exception:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _save_catalog_db(catalog):
+    _meta_set("catalog", json.dumps(catalog or {}, ensure_ascii=False))
+
+
+def _hist_from_html():
+    path = os.path.join(BASE, "smyvy.html")
+    try:
+        with open(path, encoding="utf-8") as f:
+            html = f.read()
+    except Exception:
+        return []
+    match = re.search(r"const HIST = (\{.*?\});\s*const REF", html, re.S)
+    if not match:
+        return []
+    try:
+        hist = json.loads(match.group(1))
+    except Exception:
+        return []
+    probes = hist.get("probes") if isinstance(hist, dict) else None
+    return probes if isinstance(probes, list) else []
+
+
+def sync_swabs_into_db():
+    """Из страницы добавляются только те старые пробы, которых в базе ещё нет."""
+    hist = _hist_from_html()
+    con = db()
+    for entry in hist:
+        if not isinstance(entry, dict):
+            continue
+        eid = _probe_id(entry)
+        payload = dict(entry)
+        payload["id"] = eid
+        row = con.execute("SELECT id FROM probes WHERE id=?", (eid,)).fetchone()
+        if row is None:
+            con.execute(
+                "INSERT INTO probes(id, origin, payload) VALUES(?,?,?)",
+                (eid, "hist", json.dumps(payload, ensure_ascii=False)),
+            )
+    con.commit()
+    con.close()
+    if _meta_get("journal_imported_v2") == "1":
+        return
+    incoming = []
+    if os.path.isdir(BACKUP_DIR):
+        names = sorted(name for name in os.listdir(BACKUP_DIR) if name.startswith("smyvy-journal") and name.endswith(".json"))
+        for name in names:
+            shared = _read_journal_file(os.path.join(BACKUP_DIR, name))
+            for entry in shared.get("entries") or []:
+                if isinstance(entry, dict) and str(entry.get("id") or "").startswith("u"):
+                    incoming.append(entry)
+            if isinstance(shared.get("catalog"), dict):
+                _save_catalog_db(_merge_catalog(_load_catalog_db(), shared.get("catalog")))
+    merged = _without_deleted(_merge_journal(_db_entries("user"), incoming), _deleted_probe_ids())
+    _save_user_entries(merged)
+    _meta_set("journal_imported_v2", "1")
+
+
 def _store_shared_journal(incoming_entries, incoming_catalog, replace=False):
     with JOURNAL_LOCK:
-        prev = _load_shared_journal()
+        prev_users = _db_entries("user")
         if replace:
-            merged = [entry for entry in incoming_entries if isinstance(entry, dict)]
+            merged_users = [entry for entry in incoming_entries if isinstance(entry, dict)]
         else:
-            merged = _merge_journal(prev.get("entries") or [], incoming_entries)
+            merged_users = _merge_journal(prev_users, incoming_entries)
         deleted = _deleted_probe_ids()
-        merged = _without_deleted(merged, deleted)
-        if len(merged) > 20000:
-            merged = merged[-20000:]
-        catalog = _merge_catalog(prev.get("catalog"), incoming_catalog)
-        payload = {"saved_at": now(), "entries": merged, "catalog": catalog}
+        merged_users = _without_deleted(merged_users, deleted)
+        if len(merged_users) > 20000:
+            merged_users = merged_users[-20000:]
+        _save_user_entries(merged_users)
+        catalog = _merge_catalog(_load_catalog_db(), incoming_catalog)
+        _save_catalog_db(catalog)
+        entries = _without_deleted(_db_entries(), deleted)
+        deleted_ids = sorted(deleted)
+        _remember_journal(entries, deleted_ids, catalog)
+        payload = {"saved_at": now(), "entries": entries, "catalog": catalog}
         _write_journal_file(SHARED_JOURNAL, payload)
         day = datetime.date.today().isoformat()
         _write_journal_file(os.path.join(BACKUP_DIR, "smyvy-journal-%s.json" % day), payload)
-        return merged, sorted(deleted)
+        return entries, deleted_ids
+
+
+def _invalidate_journal_cache():
+    with JOURNAL_LOCK:
+        JOURNAL_CACHE["payload"] = None
+
+
+def _remember_journal(entries, deleted_ids, catalog):
+    JOURNAL_CACHE["rev"] = int(JOURNAL_CACHE["rev"]) + 1
+    JOURNAL_CACHE["payload"] = {
+        "rev": JOURNAL_CACHE["rev"],
+        "entries": entries,
+        "deleted_ids": list(deleted_ids),
+        "catalog": catalog or {},
+    }
+    return JOURNAL_CACHE["payload"]
+
+
+def _journal_snapshot():
+    with JOURNAL_LOCK:
+        if JOURNAL_CACHE["payload"] is not None:
+            return JOURNAL_CACHE["payload"]
+        deleted_ids = sorted(_deleted_probe_ids())
+        entries = _without_deleted(_db_entries(), set(deleted_ids))
+        return _remember_journal(entries, deleted_ids, _load_catalog_db())
 
 
 def _merge_journal(prev_entries, incoming_entries):
@@ -703,17 +881,34 @@ class Handler(SimpleHTTPRequestHandler):
         if replace and u["role"] not in ("quality", "admin"):
             return self._err("нужны права на изменение", 403)
         merged, deleted_ids = _store_shared_journal(entries, b.get("catalog"), replace)
-        return self._json({"ok": True, "count": len(merged), "entries": merged, "deleted_ids": deleted_ids})
+        return self._json({
+            "ok": True,
+            "count": len(merged),
+            "entries": merged,
+            "deleted_ids": deleted_ids,
+            "rev": JOURNAL_CACHE["rev"],
+        })
+
+    def _journal_rev_query(self):
+        if "?" not in self.path:
+            return None
+        for part in self.path.split("?", 1)[1].split("&"):
+            if not part.startswith("rev="):
+                continue
+            try:
+                return int(part.split("=", 1)[1])
+            except Exception:
+                return None
+        return None
 
     def _get_shared_journal(self):
         u = self._user()
         if not u or u["role"] == "pending":
             return self._err("нужен вход", 401)
-        with JOURNAL_LOCK:
-            shared = _load_shared_journal()
-            deleted = _deleted_probe_ids()
-            entries = _without_deleted(shared.get("entries") or [], deleted)
-        return self._json({"entries": entries, "deleted_ids": sorted(deleted)})
+        snap = _journal_snapshot()
+        if self._journal_rev_query() == snap["rev"]:
+            return self._json({"unchanged": True, "rev": snap["rev"]})
+        return self._json(snap)
 
     def _list_deleted_probes(self):
         u = self._user()
@@ -758,6 +953,7 @@ class Handler(SimpleHTTPRequestHandler):
         )
         con.commit()
         con.close()
+        _invalidate_journal_cache()
         audit(u["login"], "delete_probe", "%s · %s · %s" % (probe_date, workshop, point))
         return self._json({"ok": True})
 
@@ -928,12 +1124,47 @@ class Handler(SimpleHTTPRequestHandler):
             return self._err("Ошибка ИИ: " + str(e)[:200], 502)
 
 
+def extra_backup_dir():
+    env = os.environ.get("SMYVY_BACKUP_DIR", "").strip()
+    if env:
+        return env
+    if not os.path.exists(BACKUP_DIR_FILE):
+        return ""
+    try:
+        with open(BACKUP_DIR_FILE, encoding="utf-8") as f:
+            return f.readline().strip()
+    except Exception:
+        return ""
+
+
+def _backup_targets(day):
+    name = "smyvy-app-%s.db" % day.isoformat()
+    targets = [os.path.join(BACKUP_DIR, name)]
+    extra = extra_backup_dir()
+    if extra:
+        targets.append(os.path.join(extra, name))
+    return targets
+
+
+def _snapshot_db(dest):
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    src = sqlite3.connect(DB_PATH)
+    dst = sqlite3.connect(dest)
+    try:
+        src.backup(dst)
+    finally:
+        dst.close()
+        src.close()
+
+
 def copy_app_db(day):
     if not os.path.exists(DB_PATH):
         return
-    os.makedirs(BACKUP_DIR, exist_ok=True)
-    dest = os.path.join(BACKUP_DIR, "smyvy-app-%s.db" % day.isoformat())
-    shutil.copy2(DB_PATH, dest)
+    for dest in _backup_targets(day):
+        try:
+            _snapshot_db(dest)
+        except Exception:
+            pass
 
 
 def next_backup_at(now=None):
@@ -946,16 +1177,17 @@ def next_backup_at(now=None):
 
 def catch_up_db_backup(now=None):
     now = now or datetime.datetime.now()
-    slot = now.replace(hour=BACKUP_HOUR, minute=0, second=0, microsecond=0)
-    if now >= slot:
-        dest = os.path.join(BACKUP_DIR, "smyvy-app-%s.db" % now.date().isoformat())
-        if not os.path.exists(dest):
-            copy_app_db(now.date())
+    if not os.path.exists(DB_PATH):
         return
-    yesterday = now.date() - datetime.timedelta(days=1)
-    dest = os.path.join(BACKUP_DIR, "smyvy-app-%s.db" % yesterday.isoformat())
-    if not os.path.exists(dest):
-        copy_app_db(yesterday)
+    slot = now.replace(hour=BACKUP_HOUR, minute=0, second=0, microsecond=0)
+    day = now.date() if now >= slot else now.date() - datetime.timedelta(days=1)
+    for dest in _backup_targets(day):
+        if os.path.exists(dest):
+            continue
+        try:
+            _snapshot_db(dest)
+        except Exception:
+            pass
 
 
 def backup_at_20_loop():
@@ -971,6 +1203,7 @@ def backup_at_20_loop():
 if __name__ == "__main__":
     import sys
     init_schema()
+    sync_swabs_into_db()
     catch_up_db_backup()
     threading.Thread(target=backup_at_20_loop, daemon=True).start()
     # восстановление пароля с ПК:  python app_server.py setpass email@дом пароль
