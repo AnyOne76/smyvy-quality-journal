@@ -11,6 +11,7 @@ smyvy_app.db
 # Python
 __pycache__/
 *.pyc
+.venv/
 
 # Временные файлы
 _*.js

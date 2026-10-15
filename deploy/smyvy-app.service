@@ -1,0 +1,16 @@
+[Unit]
+Description=Смывы — app_server (журнал смывов)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/devuser/projects/smyvy-quality-journal
+Environment=SMYVY_HOST=10.0.5.173
+Environment=SMYVY_PORT=8020
+ExecStart=/usr/bin/python3 -u app_server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

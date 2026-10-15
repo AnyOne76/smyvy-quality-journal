@@ -1,0 +1,33 @@
+name: CI and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install test dependencies
+        run: pip install -r requirements-test.txt
+      - name: pytest
+        run: pytest -q
+
+  deploy:
+    name: deploy
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: [self-hosted, aidev]
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy on aidev
+        env:
+          SMYVY_APP_DIR: /home/devuser/projects/smyvy-quality-journal
+        run: bash scripts/deploy.sh

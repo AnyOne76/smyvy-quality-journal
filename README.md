@@ -208,7 +208,29 @@ python app_server.py
 
 ## Развёртывание на сервере
 
-Обновить файлы программы с GitHub и перезапустить `python app_server.py`. См. также **README_SERVER.md** (`server.py`, HTTPS, роли). Рабочий запуск — `app_server.py`, не `server.py`.
+Рабочий процесс — **`app_server.py`** (не `server.py`). См. **README_SERVER.md** (HTTPS, роли).
+
+На **aidev** (`10.0.5.173:8020`, каталог `/home/devuser/projects/smyvy-quality-journal`) обновление с GitHub автоматизировано через Actions (см. ниже). Публичный домен (в работе): **laboratory-washes.kolbasa.ru** → reverse proxy на этот порт.
+
+### Автообновление с GitHub (CI/CD)
+
+1. **Тесты** — job `test` на каждый push и PR (`pytest`, см. `requirements-test.txt`).
+2. **Деплой** — только push в `main`, после зелёного `test` и **Approve** в Environment **`production`** (required reviewers в настройках репозитория).
+3. На aidev **self-hosted runner** с labels `self-hosted`, `aidev` выполняет [`scripts/deploy.sh`](scripts/deploy.sh): `git merge --ff-only`, pytest, `systemctl --user restart smyvy-app`.
+
+Локально:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-test.txt
+.venv/bin/pytest -q
+```
+
+**One-time на aidev:** скопировать [`deploy/smyvy-app.service`](deploy/smyvy-app.service) в `~/.config/systemd/user/`, `systemctl --user enable --now smyvy-app`, `loginctl enable-linger devuser`, venv с тестами в каталоге проекта, зарегистрировать runner в GitHub → Settings → Actions → Runners.
+
+**При деплое не трогаются** (см. список выше): `smyvy_app.db`, `.secret`, `.ai_key`, `.smtp_config`, `.backup_dir`, `backups/`.
+
+**Откат:** в каталоге приложения `git checkout <коммит>` и `systemctl --user restart smyvy-app`.
 
 ## Секреты (не коммитить)
 
