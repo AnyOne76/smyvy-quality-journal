@@ -30,7 +30,9 @@ python3 -m venv .venv
 
 ```bash
 cd /home/devuser/projects/smyvy-quality-journal
-RUNNER_TOKEN='<token>' bash scripts/install-github-runner.sh
+git pull origin main
+# новый токен обязателен; UPGRADE=1 — перекачать бинарники (минимум GitHub: 2.329.0)
+RUNNER_TOKEN='<token>' UPGRADE=1 bash scripts/install-github-runner.sh
 ```
 
 Labels: `aidev` (workflow: `runs-on: [self-hosted, aidev]`).
