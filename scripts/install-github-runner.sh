@@ -7,6 +7,9 @@
 #   RUNNER_TOKEN='...' RECONFIGURE=1 bash scripts/install-github-runner.sh
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 if [[ "$(id -u)" -eq 0 ]]; then
   echo "Не запускайте этот скрипт через sudo. Выполните от пользователя devuser." >&2
   exit 1
@@ -54,7 +57,7 @@ else
 fi
 
 # User systemd — без sudo (в отличие от ./svc.sh)
-sed "s|%h|$HOME|g" "$(dirname "$0")/../deploy/actions-runner-smyvy.service" > "$UNIT_DST"
+sed "s|%h|$HOME|g" "$REPO_ROOT/deploy/actions-runner-smyvy.service" > "$UNIT_DST"
 systemctl --user daemon-reload
 systemctl --user enable "$UNIT_NAME"
 systemctl --user restart "$UNIT_NAME"
