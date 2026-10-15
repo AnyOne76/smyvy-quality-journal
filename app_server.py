@@ -37,7 +37,7 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "1.4.1"
+APP_VERSION = "1.5"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
@@ -307,41 +307,71 @@ def _merge_named_lists(left, right):
     return merged
 
 
-def _foreman_names(value):
-    if isinstance(value, list):
-        return value
+def _as_named_map(value):
     if isinstance(value, dict):
-        names = []
-        for item in value.values():
-            if isinstance(item, list):
-                names.extend(item)
-        return names
-    return []
+        out = {}
+        for key, names in value.items():
+            if isinstance(names, list):
+                out[str(key)] = names
+        return out
+    if isinstance(value, list):
+        names = [str(name).strip() for name in value if str(name or "").strip()]
+        return {"*": names} if names else {}
+    return {}
+
+
+def _trim_common_foremen(foremen):
+    if not isinstance(foremen, dict) or "*" not in foremen:
+        return foremen
+    placed = set()
+    for key, names in foremen.items():
+        if key == "*" or not isinstance(names, list):
+            continue
+        for name in names:
+            placed.add(_name_key(name))
+    common = [name for name in foremen.get("*") or [] if _name_key(name) not in placed]
+    out = {key: names for key, names in foremen.items() if key != "*"}
+    if common:
+        out["*"] = common
+    return out
+
+
+def _drop_names(names, removed):
+    keys = {_name_key(name) for name in (removed if isinstance(removed, list) else [])}
+    return [name for name in names if _name_key(name) not in keys]
+
+
+def _drop_named(lists, removed):
+    if not isinstance(removed, dict):
+        return lists
+    out = {}
+    for key, names in lists.items():
+        gone = []
+        for removed_key, removed_names in removed.items():
+            if _name_key(removed_key) == _name_key(key) and isinstance(removed_names, list):
+                gone.extend(removed_names)
+        left = _drop_names(names, gone)
+        if left:
+            out[key] = left
+    return out
 
 
 def _merge_catalog(prev, incoming):
+    """Названия только добавляются. Убранное возвращается лишь по явному списку unhide."""
     prev = prev if isinstance(prev, dict) else {}
     incoming = incoming if isinstance(incoming, dict) else {}
-    incoming_hidden = incoming.get("hiddenForemen")
-    hidden_foremen = _merge_name_list(prev.get("hiddenForemen"), incoming_hidden if isinstance(incoming_hidden, list) else [])
-    if isinstance(incoming_hidden, list):
-        incoming_hidden_keys = {_name_key(name) for name in incoming_hidden}
-        incoming_visible_keys = {_name_key(name) for name in _foreman_names(incoming.get("foremen"))}
-        hidden_foremen = [
-            name for name in hidden_foremen
-            if _name_key(name) in incoming_hidden_keys or _name_key(name) not in incoming_visible_keys
-        ]
-    hidden_keys = {_name_key(name) for name in hidden_foremen}
-    foremen = [
-        name for name in _merge_name_list(_foreman_names(prev.get("foremen")), _foreman_names(incoming.get("foremen")))
-        if _name_key(name) not in hidden_keys
-    ]
+    unhide = incoming.get("unhide") if isinstance(incoming.get("unhide"), dict) else {}
+    unhide_foremen = unhide.get("foremen") if isinstance(unhide.get("foremen"), dict) else {}
+    hidden_foremen = _drop_named(
+        _merge_named_lists(_as_named_map(prev.get("hiddenForemen")), _as_named_map(incoming.get("hiddenForemen"))),
+        unhide_foremen,
+    )
     return {
         "cehs": _merge_name_list(prev.get("cehs"), incoming.get("cehs")),
         "points": _merge_named_lists(prev.get("points"), incoming.get("points")),
-        "foremen": foremen,
-        "hiddenCehs": _merge_name_list(prev.get("hiddenCehs"), incoming.get("hiddenCehs")),
-        "hiddenPoints": _merge_named_lists(prev.get("hiddenPoints"), incoming.get("hiddenPoints")),
+        "foremen": _trim_common_foremen(_merge_named_lists(_as_named_map(prev.get("foremen")), _as_named_map(incoming.get("foremen")))),
+        "hiddenCehs": _drop_names(_merge_name_list(prev.get("hiddenCehs"), incoming.get("hiddenCehs")), unhide.get("cehs")),
+        "hiddenPoints": _drop_named(_merge_named_lists(prev.get("hiddenPoints"), incoming.get("hiddenPoints")), unhide.get("points")),
         "hiddenForemen": hidden_foremen,
     }
 
@@ -427,6 +457,16 @@ def _deleted_probe_ids():
     ).fetchall()
     con.close()
     return {str(r["probe_id"]) for r in rows}
+
+
+def _undelete_probe_ids(ids):
+    wanted = [str(i).strip() for i in ids if str(i or "").strip()]
+    if not wanted:
+        return
+    con = db()
+    con.executemany("DELETE FROM deleted_probes WHERE probe_id=?", [(i,) for i in wanted])
+    con.commit()
+    con.close()
 
 
 def _without_deleted(entries, deleted_ids):
@@ -574,6 +614,7 @@ def _store_shared_journal(incoming_entries, incoming_catalog, replace=False):
         prev_users = _db_entries("user")
         if replace:
             merged_users = [entry for entry in incoming_entries if isinstance(entry, dict)]
+            _undelete_probe_ids(_probe_id(entry) for entry in merged_users)
         else:
             merged_users = _merge_journal(prev_users, incoming_entries)
         deleted = _deleted_probe_ids()
@@ -893,11 +934,14 @@ class Handler(SimpleHTTPRequestHandler):
         if replace and u["role"] not in ("quality", "admin"):
             return self._err("нужны права на изменение", 403)
         merged, deleted_ids = _store_shared_journal(entries, b.get("catalog"), replace)
+        restored = sum(1 for entry in merged if isinstance(entry, dict) and str(entry.get("id") or "").startswith("u"))
         return self._json({
             "ok": True,
             "count": len(merged),
+            "restored": restored,
             "entries": merged,
             "deleted_ids": deleted_ids,
+            "catalog": _load_catalog_db(),
             "rev": JOURNAL_CACHE["rev"],
         })
 

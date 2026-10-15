@@ -80,7 +80,8 @@
 
   .combo{position:relative;}
   .combo>input{padding-right:36px;}
-  .combo .arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--muted);display:flex;}
+  .combo .arrow{position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:auto;cursor:pointer;z-index:2;color:var(--muted);display:flex;}
+  .combo .arrow.open{transform:translateY(-50%) rotate(180deg);}
   .combo-list{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow);max-height:300px;overflow-y:auto;z-index:40;display:none;padding:5px;}
   .combo-list.open{display:block;}
   .combo-opt{padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13.5px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -88,6 +89,16 @@
   .combo-empty{padding:10px 12px;color:var(--muted);font-size:12.5px;}
   .combo-add{display:block;width:100%;text-align:left;border:none;border-top:1px solid var(--hairline);background:transparent;color:var(--accent);font-size:13px;font-weight:650;padding:10px 12px;cursor:pointer;}
   .combo-add:hover{background:var(--accent-soft);}
+  .combo-opt.sel{background:var(--accent-soft);color:var(--accent);font-weight:600;}
+  .combo-opt.sel::before{content:"✓  ";}
+  .combo-done{position:sticky;bottom:-5px;display:block;width:calc(100% + 10px);margin:6px -5px -5px;border:none;border-top:1px solid var(--hairline);background:var(--surface);color:var(--accent);font-size:13px;font-weight:650;padding:10px 12px;cursor:pointer;border-radius:0 0 11px 11px;}
+  .combo-done:hover{background:var(--accent-soft);}
+  .pt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .pt-chips:empty{display:none;}
+  .pt-chip{display:inline-flex;align-items:center;gap:4px;max-width:100%;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:4px 4px 4px 12px;font-size:13px;font-weight:600;}
+  .pt-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .pt-chip button{border:none;background:transparent;color:inherit;cursor:pointer;font-size:16px;line-height:1;width:22px;height:22px;border-radius:999px;}
+  .pt-chip button:hover{background:var(--surface);}
   .lbl-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:32px;}
   .addmini{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;cursor:pointer;white-space:nowrap;}
   .addmini:hover{background:var(--accent);color:#fff;}
@@ -431,7 +442,7 @@
 <header>
   <div class="bar">
     <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><circle cx="8" cy="8" r="1.1" fill="#fff"/><circle cx="16.5" cy="9.5" r="1.1" fill="#fff"/><circle cx="15" cy="16" r="1.1" fill="#fff"/></svg></div>
-    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.4.1</span></div>
+    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.5</span></div>
     <div class="tabs" role="tablist">
       <a class="tab on" data-tab="input" href="/input"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="t">Ввод</span></a>
       <a class="tab" data-tab="journal" href="/journal"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg><span class="t">Журнал</span><span class="b" id="tab-count">0</span></a>
@@ -463,12 +474,13 @@
       <div class="grid2" style="margin-top:16px">
         <div class="field">
           <div class="lbl-row"><label class="lbl" for="f-point">Точка отбора <span class="req">*</span></label><button type="button" class="addmini" id="add-point-open">Добавить точку</button></div>
-          <div class="combo" data-combo="point"><input id="f-point" placeholder="начните вводить или выберите" autocomplete="off"><span class="arrow" id="point-arrow"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></span><div class="combo-list" id="point-list"></div></div>
+          <div class="combo" data-combo="point"><input id="f-point" placeholder="выберите одну или несколько" autocomplete="off"><span class="arrow" id="point-arrow"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></span><div class="combo-list" id="point-list"></div></div>
+          <div class="pt-chips" id="point-chips"></div>
           <div class="addrow" id="add-point-row"><input id="add-point-name" placeholder="Название новой точки" maxlength="200"><button type="button" class="addok" id="add-point-ok">Добавить</button><button type="button" class="addcancel" id="add-point-cancel">Отмена</button></div>
         </div>
         <div class="field">
           <div class="lbl-row"><label class="lbl" for="f-foreman">Мастер цеха <span class="req">*</span></label><button type="button" class="addmini" id="add-foreman-open">Добавить мастера</button></div>
-          <div class="combo" data-combo="foreman"><input id="f-foreman" placeholder="начните вводить или выберите" autocomplete="off"><span class="arrow" id="foreman-arrow"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></span><div class="combo-list" id="foreman-list"></div></div>
+          <div class="combo" data-combo="foreman"><input id="f-foreman" placeholder="сначала цех, затем мастер" autocomplete="off"><span class="arrow" id="foreman-arrow"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></span><div class="combo-list" id="foreman-list"></div></div>
           <div class="addrow" id="add-foreman-row"><input id="add-foreman-name" placeholder="ФИО нового мастера" maxlength="120"><button type="button" class="addok" id="add-foreman-ok">Добавить</button><button type="button" class="addcancel" id="add-foreman-cancel">Отмена</button></div>
         </div>
       </div>
@@ -746,10 +758,22 @@ const BASE_POINTS = {};
 Object.keys(REF.points).forEach(ceh => { BASE_POINTS[ceh] = new Set((REF.points[ceh]||[]).map(p => String(p).toLowerCase())); });
 const LIMIT = HIST.limit;
 const CATALOG_KEY = "smyvy_catalog_v1";
-const FOREMEN = [];
+const CATALOG_SYNC_KEY = "smyvy_catalog_synced_v1";
+const CATALOG_DIRTY_KEY = "smyvy_catalog_dirty_v1";
+let catalogRev = 0;
+let catalogDirty = (() => {
+  try { return localStorage.getItem(CATALOG_DIRTY_KEY) === "1" || !localStorage.getItem(CATALOG_SYNC_KEY); }
+  catch(e){ return true; }
+})();
+function setCatalogDirty(on){
+  catalogDirty = on;
+  try { if(on) localStorage.setItem(CATALOG_DIRTY_KEY, "1"); else localStorage.removeItem(CATALOG_DIRTY_KEY); } catch(e){}
+}
+const FOREMEN = {};
 const HIDDEN_CEHS = [];
 const HIDDEN_POINTS = {};
-const HIDDEN_FOREMEN = [];
+const HIDDEN_FOREMEN = {};
+let legacyForemanPool = [];
 function normName(s){ return String(s||"").replace(/\s+/g," ").trim(); }
 function sameName(a,b){ return normName(a).toLowerCase() === normName(b).toLowerCase(); }
 function saveCatalog(){
@@ -760,11 +784,57 @@ function saveCatalog(){
     if(extra.length) points[ceh] = extra;
   });
   try { localStorage.setItem(CATALOG_KEY, JSON.stringify({ cehs: CEHS.slice(BASE_CEH_COUNT), points, foremen: FOREMEN, hiddenCehs: HIDDEN_CEHS, hiddenPoints: HIDDEN_POINTS, hiddenForemen: HIDDEN_FOREMEN })); } catch(e){}
+  catalogRev++;
+  setCatalogDirty(true);
   scheduleBackup();
 }
-function loadCatalog(){
-  let raw = {};
-  try { raw = JSON.parse(localStorage.getItem(CATALOG_KEY) || "{}"); } catch(e){ return; }
+// сервер не возвращает убранное сам: отправляем только что убрали и что вернули с прошлой сверки
+function catalogPayload(){
+  if(!catalogDirty) return {};
+  let local = {}, synced = null;
+  try { local = JSON.parse(localStorage.getItem(CATALOG_KEY) || "{}"); } catch(e){}
+  try { synced = JSON.parse(localStorage.getItem(CATALOG_SYNC_KEY) || "null"); } catch(e){}
+  const was = synced || {};
+  const minus = (a, b) => (Array.isArray(a) ? a : []).filter(n => !(Array.isArray(b) ? b : []).some(x => sameName(x, n)));
+  const minusMap = (a, b) => {
+    const out = {};
+    if(!a || typeof a !== "object" || Array.isArray(a)) return out;
+    Object.keys(a).forEach(k => {
+      const bk = Object.keys(b || {}).find(x => sameName(x, k));
+      const left = minus(a[k], bk ? b[bk] : []);
+      if(left.length) out[k] = left;
+    });
+    return out;
+  };
+  const foremenMap = (local.foremen && typeof local.foremen === "object" && !Array.isArray(local.foremen)) ? local.foremen : null;
+  return {
+    cehs: local.cehs || [], points: local.points || {},
+    foremen: foremenMap || {},
+    hiddenCehs: minus(local.hiddenCehs, was.hiddenCehs),
+    hiddenPoints: minusMap(local.hiddenPoints, was.hiddenPoints),
+    hiddenForemen: minusMap(local.hiddenForemen, was.hiddenForemen),
+    unhide: synced ? {
+      cehs: minus(was.hiddenCehs, local.hiddenCehs),
+      points: minusMap(was.hiddenPoints, local.hiddenPoints),
+      foremen: minusMap(was.hiddenForemen, local.hiddenForemen)
+    } : {}
+  };
+}
+function applyServerCatalog(cat, rev){
+  if(!cat || typeof cat !== "object" || catalogDirty || rev !== catalogRev) return;
+  const text = JSON.stringify(cat);
+  try { if(localStorage.getItem(CATALOG_SYNC_KEY) === text) return; } catch(e){}
+  try { localStorage.setItem(CATALOG_SYNC_KEY, text); localStorage.setItem(CATALOG_KEY, text); } catch(e){}
+  loadCatalog(cat);
+  seedForemenFromProbes();
+  fillCehSelect();
+  if(cehSel.value) curPoints = visiblePoints(cehSel.value);
+  if($("#v-journal").classList.contains("on")) renderCehBar();
+  if(can("admin")) renderAdminCatalog();
+}
+function loadCatalog(src){
+  let raw = src || {};
+  if(!src){ try { raw = JSON.parse(localStorage.getItem(CATALOG_KEY) || "{}"); } catch(e){ return; } }
   (Array.isArray(raw.cehs) ? raw.cehs : []).forEach(name => {
     const n = normName(name);
     if(n && !CEHS.some(c => sameName(c, n))) CEHS.push(n);
@@ -780,11 +850,20 @@ function loadCatalog(){
       if(name && !REF.points[key].some(x => sameName(x, name))) REF.points[key].push(name);
     });
   });
-  const savedForemen = Array.isArray(raw.foremen) ? raw.foremen : (raw.foremen && typeof raw.foremen === "object" ? Object.values(raw.foremen).flat() : []);
-  savedForemen.forEach(p => {
-    const name = normName(p);
-    if(name && !FOREMEN.some(x => sameName(x, name))) FOREMEN.push(name);
-  });
+  if(raw.foremen && typeof raw.foremen === "object" && !Array.isArray(raw.foremen)){
+    Object.entries(raw.foremen).forEach(([ceh, list]) => {
+      if(!Array.isArray(list)) return;
+      const key = ceh === "*" ? "*" : (CEHS.find(c => sameName(c, ceh)) || normName(ceh));
+      if(!key) return;
+      if(!Array.isArray(FOREMEN[key])) FOREMEN[key] = [];
+      list.forEach(p => {
+        const name = normName(p);
+        if(name && !FOREMEN[key].some(x => sameName(x, name))) FOREMEN[key].push(name);
+      });
+    });
+  } else if(Array.isArray(raw.foremen)){
+    legacyForemanPool = raw.foremen.map(normName).filter(Boolean);
+  }
   HIDDEN_CEHS.length = 0;
   (Array.isArray(raw.hiddenCehs) ? raw.hiddenCehs : []).forEach(name => {
     const n = normName(name);
@@ -802,14 +881,28 @@ function loadCatalog(){
       if(name && !HIDDEN_POINTS[key].some(x => sameName(x, name))) HIDDEN_POINTS[key].push(name);
     });
   });
-  HIDDEN_FOREMEN.length = 0;
-  (Array.isArray(raw.hiddenForemen) ? raw.hiddenForemen : []).forEach(name => {
-    const n = normName(name);
-    if(!n || HIDDEN_FOREMEN.some(x => sameName(x, n))) return;
-    HIDDEN_FOREMEN.push(n);
-    const i = FOREMEN.findIndex(x => sameName(x, n));
-    if(i >= 0) FOREMEN.splice(i, 1);
-  });
+  Object.keys(HIDDEN_FOREMEN).forEach(k => delete HIDDEN_FOREMEN[k]);
+  if(raw.hiddenForemen && typeof raw.hiddenForemen === "object" && !Array.isArray(raw.hiddenForemen)){
+    Object.entries(raw.hiddenForemen).forEach(([ceh, list]) => {
+      if(!Array.isArray(list)) return;
+      const key = CEHS.find(c => sameName(c, ceh)) || normName(ceh);
+      if(!key) return;
+      HIDDEN_FOREMEN[key] = [];
+      list.forEach(p => {
+        const n = normName(p);
+        if(n && !HIDDEN_FOREMEN[key].some(x => sameName(x, n))) HIDDEN_FOREMEN[key].push(n);
+      });
+    });
+  } else if(Array.isArray(raw.hiddenForemen)){
+    raw.hiddenForemen.forEach(name => {
+      const n = normName(name);
+      if(!n) return;
+      CEHS.forEach(ceh => {
+        if(!Array.isArray(HIDDEN_FOREMEN[ceh])) HIDDEN_FOREMEN[ceh] = [];
+        if(!HIDDEN_FOREMEN[ceh].some(x => sameName(x, n))) HIDDEN_FOREMEN[ceh].push(n);
+      });
+    });
+  }
 }
 loadCatalog();
 function isCehHidden(name){ return HIDDEN_CEHS.some(x => sameName(x, name)); }
@@ -821,6 +914,59 @@ function hiddenPointList(ceh){
 function isPointHidden(ceh, point){ return hiddenPointList(ceh).some(p => sameName(p, point)); }
 function visibleCehs(){ return CEHS.filter(c => !isCehHidden(c)); }
 function visiblePoints(ceh){ return (REF.points[ceh] || []).filter(p => !isPointHidden(ceh, p)); }
+function pushForeman(ceh, raw){
+  const name = normName(raw);
+  const key = CEHS.find(c => sameName(c, ceh)) || normName(ceh);
+  if(!key || !name) return name;
+  if(!Array.isArray(FOREMEN[key])) FOREMEN[key] = [];
+  const existing = FOREMEN[key].find(p => sameName(p, name));
+  if(existing) return existing;
+  FOREMEN[key].push(name);
+  return name;
+}
+function hiddenForemanList(ceh){
+  const key = Object.keys(HIDDEN_FOREMEN).find(k => sameName(k, ceh));
+  if(!key) return [];
+  return HIDDEN_FOREMEN[key];
+}
+function isForemanHidden(ceh, name){
+  return hiddenForemanList(ceh).some(p => sameName(p, name)) || hiddenForemanList("*").some(p => sameName(p, name));
+}
+function visibleForemen(ceh){
+  const key = Object.keys(FOREMEN).find(k => k !== "*" && sameName(k, ceh));
+  const specific = key ? FOREMEN[key].slice() : [];
+  const have = new Set(specific.map(n => normName(n).toLowerCase()));
+  const common = (FOREMEN["*"] || []).filter(n => !have.has(normName(n).toLowerCase()));
+  return specific.concat(common).filter(p => !isForemanHidden(ceh, p));
+}
+function unhideForeman(ceh, name){
+  const key = Object.keys(HIDDEN_FOREMEN).find(k => sameName(k, ceh));
+  if(!key) return;
+  HIDDEN_FOREMEN[key] = HIDDEN_FOREMEN[key].filter(p => !sameName(p, name));
+}
+function seedForemenFromProbes(){
+  const hist = (typeof HIST !== "undefined" && Array.isArray(HIST.probes)) ? HIST.probes : [];
+  const users = (typeof userEntries !== "undefined" && Array.isArray(userEntries)) ? userEntries : [];
+  const extra = (typeof serverProbes !== "undefined" && Array.isArray(serverProbes)) ? serverProbes : [];
+  const probes = extra.length ? extra : hist.concat(users);
+  probes.forEach(pr => {
+    if(!pr || !pr.foreman) return;
+    const ceh = pr.cn || CEHS[pr.c];
+    if(ceh) pushForeman(ceh, pr.foreman);
+  });
+  if(!legacyForemanPool.length) return;
+  const placed = new Set();
+  Object.keys(FOREMEN).forEach(k => {
+    if(k === "*") return;
+    (FOREMEN[k] || []).forEach(n => placed.add(normName(n).toLowerCase()));
+  });
+  legacyForemanPool.forEach(n => {
+    if(!n || placed.has(n.toLowerCase())) return;
+    if(!Array.isArray(FOREMEN["*"])) FOREMEN["*"] = [];
+    if(!FOREMEN["*"].some(x => sameName(x, n))) FOREMEN["*"].push(n);
+  });
+  legacyForemanPool = [];
+}
 function unhideCeh(name){
   const i = HIDDEN_CEHS.findIndex(x => sameName(x, name));
   if(i >= 0) HIDDEN_CEHS.splice(i, 1);
@@ -957,7 +1103,8 @@ function renderAdminCatalog(){
   const ceh = cehSelAdm.value;
   const points = ceh ? visiblePoints(ceh) : [];
   pointSel.innerHTML = points.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join("");
-  foremanSel.innerHTML = FOREMEN.map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join("");
+  const masters = ceh ? visibleForemen(ceh) : [];
+  foremanSel.innerHTML = masters.map(name => `<option value="${esc(name)}">${esc(name)}</option>`).join("");
   $("#adm-del-ceh").disabled = !cehSelAdm.value;
   $("#adm-del-point").disabled = !pointSel.value;
   $("#adm-del-foreman").disabled = !foremanSel.value;
@@ -971,7 +1118,9 @@ function hiddenCatalogItems(){
   Object.keys(HIDDEN_POINTS).forEach(ceh => {
     (HIDDEN_POINTS[ceh] || []).forEach(point => items.push({ kind:"point", ceh, name:point, label:`Точка: ${ceh} — ${point}` }));
   });
-  HIDDEN_FOREMEN.forEach(name => items.push({ kind:"foreman", ceh:"", name, label:`Мастер: ${name}` }));
+  Object.keys(HIDDEN_FOREMEN).forEach(ceh => {
+    (HIDDEN_FOREMEN[ceh] || []).forEach(name => items.push({ kind:"foreman", ceh, name, label:`Мастер: ${ceh} — ${name}` }));
+  });
   return items;
 }
 function ruNoun(n, one, few, many){
@@ -1034,15 +1183,13 @@ function restoreAdminPoint(ceh, point){
   renderAdminCatalog();
   toast("Точка возвращена в список", {ok:true});
 }
-function restoreAdminForeman(name){
-  if(!can("admin") || !name) return;
-  const i = HIDDEN_FOREMEN.findIndex(p => sameName(p, name));
-  if(i < 0) return;
-  const stored = HIDDEN_FOREMEN.splice(i, 1)[0];
-  if(!FOREMEN.some(p => sameName(p, stored))) FOREMEN.push(stored);
+function restoreAdminForeman(ceh, name){
+  if(!can("admin") || !ceh || !name) return;
+  if(!isForemanHidden(ceh, name)) return;
+  unhideForeman(ceh, name);
   saveCatalog();
   renderAdminCatalog();
-  toast("Мастер возвращён в список", {ok:true});
+  toast("Мастер возвращён в список этого цеха", {ok:true});
 }
 function deleteAdminCeh(){
   if(!can("admin")) return;
@@ -1073,15 +1220,16 @@ function deleteAdminPoint(){
 }
 function deleteAdminForeman(){
   if(!can("admin")) return;
+  const ceh = $("#adm-ceh").value;
   const name = $("#adm-foreman").value;
-  if(!name) return;
-  if(!confirm(`Удалить мастера «${name}» из списка?`)) return;
-  const i = FOREMEN.findIndex(p => sameName(p, name));
-  const stored = i >= 0 ? FOREMEN.splice(i, 1)[0] : name;
-  if(!HIDDEN_FOREMEN.some(p => sameName(p, stored))) HIDDEN_FOREMEN.push(stored);
+  if(!ceh || !name) return;
+  if(!confirm(`Удалить мастера «${name}» из цеха «${ceh}»?`)) return;
+  const key = Object.keys(HIDDEN_FOREMEN).find(k => sameName(k, ceh)) || ceh;
+  if(!Array.isArray(HIDDEN_FOREMEN[key])) HIDDEN_FOREMEN[key] = [];
+  if(!HIDDEN_FOREMEN[key].some(p => sameName(p, name))) HIDDEN_FOREMEN[key].push(name);
   saveCatalog();
   renderAdminCatalog();
-  toast("Мастер убран из списка", {ok:true});
+  toast("Мастер убран из списка этого цеха", {ok:true});
 }
 $("#adm-ceh").addEventListener("change", renderAdminCatalog);
 $("#adm-del-ceh").addEventListener("click", deleteAdminCeh);
@@ -1098,7 +1246,7 @@ $("#adm-hidden").addEventListener("click", e => {
   if(!btn) return;
   if(btn.dataset.restore === "ceh") restoreAdminCeh(btn.dataset.name);
   else if(btn.dataset.restore === "point") restoreAdminPoint(btn.dataset.ceh, btn.dataset.name);
-  else if(btn.dataset.restore === "foreman") restoreAdminForeman(btn.dataset.name);
+  else if(btn.dataset.restore === "foreman") restoreAdminForeman(btn.dataset.ceh, btn.dataset.name);
 });
 $("#adm-hidden").addEventListener("input", e => {
   if(e.target.id !== "adm-hidden-q") return;
@@ -1285,6 +1433,7 @@ function combineLocal(){
   return Array.from(map.values());
 }
 let userEntries = combineLocal();
+seedForemenFromProbes();
 function persistPending(){
   try { localStorage.setItem(pendingStore, JSON.stringify(pendingEntries)); } catch(e){}
 }
@@ -1310,13 +1459,15 @@ function scheduleBackup(){
 }
 async function sendBackup(){
   const epoch = journalEpoch;
-  let catalog = {};
-  try { catalog = JSON.parse(localStorage.getItem(CATALOG_KEY) || "{}"); } catch(e){}
+  const rev = catalogRev;
+  const catalog = catalogPayload();
   const entries = pendingEntries.slice();
   try {
     const res = await apiJSON("/api/backup", "POST", { entries, catalog });
     if(epoch !== journalEpoch || !res.ok) return;
+    if(rev === catalogRev) setCatalogDirty(false);
     if(res.data && res.data.rev) journalRev = res.data.rev;
+    applyServerCatalog(res.data && res.data.catalog, rev);
     applySharedJournal(res.data);
   } catch(e){}
 }
@@ -1336,6 +1487,17 @@ function applySharedJournal(data, replace){
   }
   const deleted = new Set((data.deleted_ids || []).map(String));
   const remote = data.entries.filter(entry => entry && entry.id && !deleted.has(String(entry.id)));
+  // номер цеха у разных компьютеров может не совпадать — главное название
+  remote.forEach(entry => {
+    if(!entry.cn) return;
+    let i = CEHS.findIndex(c => sameName(c, entry.cn));
+    if(i < 0){
+      CEHS.push(normName(entry.cn));
+      i = CEHS.length - 1;
+      if(!Array.isArray(REF.points[CEHS[i]])) REF.points[CEHS[i]] = [];
+    }
+    entry.c = i;
+  });
   const remoteIds = new Set(remote.map(entry => String(entry.id)));
   pendingEntries = pendingEntries.filter(entry => entry && entry.id && !deleted.has(String(entry.id)));
   const pendingById = new Map(pendingEntries.map(entry => [String(entry.id), entry]));
@@ -1381,19 +1543,22 @@ function applySharedJournal(data, replace){
   if(serverProbes && serverProbes.map(entryStamp).join("|") === fullStamp) return;
   serverProbes = next;
   userEntries = next.filter(entry => entry && entry.origin !== "hist");
+  seedForemenFromProbes();
   updateCounts();
   if($("#v-journal").classList.contains("on")){ renderCehBar(); renderStatusBar(); renderJournal(); }
   if($("#v-stats").classList.contains("on")) renderStats();
 }
 async function pullJournal(){
   if(!SERVER || !ME.login || ME.role==="pending") return;
-  if(pendingEntries.length) await sendBackup();
+  if(pendingEntries.length || catalogDirty) await sendBackup();
   const epoch = journalEpoch;
+  const rev = catalogRev;
   try {
     const res = await apiJSON("/api/journal?rev=" + encodeURIComponent(journalRev || 0));
     if(epoch !== journalEpoch || !res.ok) return;
     if(res.data && res.data.rev) journalRev = res.data.rev;
     if(res.data && res.data.unchanged) return;
+    applyServerCatalog(res.data.catalog, rev);
     applySharedJournal(res.data);
   } catch(e){}
 }
@@ -1666,7 +1831,8 @@ function recalc(){
 cehSel.addEventListener("change", () => {
   const ceh = cehSel.value;
   curPoints = visiblePoints(ceh);
-  $("#f-point").value=""; closePointList();
+  $("#f-point").value=""; closePointList(); clearPickedPoints();
+  $("#f-foreman").value=""; closeForemanList();
   syncIndicators();
 });
 
@@ -1682,14 +1848,53 @@ function openPointList(filter){
   if(!cehSel.value) html = `<div class="combo-empty">Сначала выберите цех</div>`;
   else if(!curPoints.length && !typed) html = `<div class="combo-empty">В этом цехе пока нет точек</div>`;
   else if(!items.length) html = `<div class="combo-empty">Нет совпадений</div>`;
-  else html = items.slice(0,200).map(p => `<div class="combo-opt" title="${esc(p)}">${esc(p)}</div>`).join("");
+  else html = items.slice(0,200).map(p => `<div class="combo-opt${pickedPoints.some(x => sameName(x, p)) ? " sel" : ""}" title="${esc(p)}">${esc(p)}</div>`).join("");
   if(cehSel.value && typed && !exact) html += `<button type="button" class="combo-add">Добавить точку «${esc(typed)}»</button>`;
+  html += `<button type="button" class="combo-done">Готово</button>`;
   pointList.innerHTML = html;
   pointList.classList.add("open");
+  $("#point-arrow").classList.add("open");
 }
-function closePointList(){ pointList.classList.remove("open"); }
-pointInput.addEventListener("focus", () => openPointList(pointInput.value));
+function closePointList(){
+  pointList.classList.remove("open");
+  $("#point-arrow").classList.remove("open");
+}
+let pickedPoints = [];
+function renderPickedPoints(){
+  $("#point-chips").innerHTML = pickedPoints.map((p, i) =>
+    `<span class="pt-chip"><span title="${esc(p)}">${esc(p)}</span><button type="button" data-unpick="${i}" title="Убрать точку">×</button></span>`).join("");
+}
+function pickPoint(name){
+  if(!pickedPoints.some(p => sameName(p, name))) pickedPoints.push(name);
+  pointInput.value = ""; pointInput.classList.remove("invalid");
+  renderPickedPoints();
+}
+function togglePickedPoint(name){
+  const i = pickedPoints.findIndex(p => sameName(p, name));
+  if(i >= 0){ pickedPoints.splice(i, 1); pointInput.value = ""; renderPickedPoints(); }
+  else pickPoint(name);
+}
+function clearPickedPoints(){ pickedPoints = []; renderPickedPoints(); }
+$("#point-chips").addEventListener("click", e => {
+  const btn = e.target.closest("[data-unpick]"); if(!btn) return;
+  pickedPoints.splice(+btn.dataset.unpick, 1);
+  renderPickedPoints();
+  if(pointList.classList.contains("open")) openPointList(pointInput.value);
+});
+let ignorePointClick = false;
+pointInput.addEventListener("focus", () => {
+  openPointList(pointInput.value);
+  ignorePointClick = true;
+});
+pointInput.addEventListener("click", () => {
+  if(ignorePointClick){ ignorePointClick = false; return; }
+  if(pointList.classList.contains("open")) closePointList();
+  else openPointList(pointInput.value);
+});
 pointInput.addEventListener("input", () => { openPointList(pointInput.value); if(!normName(pointInput.value)) syncIndicators(); });
+pointInput.addEventListener("keydown", e => {
+  if(e.key === "Escape"){ e.preventDefault(); closePointList(); }
+});
 pointInput.addEventListener("blur", () => syncIndicators());
 $("#point-arrow").parentElement.addEventListener("mousedown", e => {
   if(e.target.closest(".combo-list")) return;
@@ -1723,6 +1928,7 @@ function addCeh(raw){
   }
   CEHS.push(name);
   if(!Array.isArray(REF.points[name])) REF.points[name] = [];
+  if(!Array.isArray(FOREMEN[name])) FOREMEN[name] = [];
   saveCatalog();
   fillCehSelect(name);
   cehSel.dispatchEvent(new Event("change"));
@@ -1740,15 +1946,13 @@ function addPoint(raw){
     unhidePoint(ceh, existing);
     saveCatalog();
     if(cehSel.value === ceh) curPoints = visiblePoints(ceh);
-    pointInput.value = existing;
-    pointInput.classList.remove("invalid");
+    pickPoint(existing);
     closePointList();
     syncIndicators();
     toast("Такая точка уже есть в этом цехе");
     return true;
   }
-  pointInput.value = ensurePoint(ceh, name);
-  pointInput.classList.remove("invalid");
+  pickPoint(ensurePoint(ceh, name));
   closePointList();
   syncIndicators();
   toast("Точка отбора добавлена");
@@ -1766,87 +1970,97 @@ function wireAdder(openBtn, row, input, okBtn, cancelBtn, onOk){
 }
 wireAdder($("#add-ceh-open"), $("#add-ceh-row"), $("#add-ceh-name"), $("#add-ceh-ok"), $("#add-ceh-cancel"), addCeh);
 wireAdder($("#add-point-open"), $("#add-point-row"), $("#add-point-name"), $("#add-point-ok"), $("#add-point-cancel"), addPoint);
-function ensureForeman(raw){
+function ensureForeman(ceh, raw){
   const name = normName(raw);
-  if(!name) return name;
-  const existing = FOREMEN.find(p => sameName(p, name));
+  if(!ceh || !name) return name;
+  const existing = visibleForemen(ceh).find(p => sameName(p, name));
   if(existing) return existing;
-  const hidden = HIDDEN_FOREMEN.find(p => sameName(p, name));
+  const hidden = hiddenForemanList(ceh).find(p => sameName(p, name));
   if(hidden){
-    HIDDEN_FOREMEN.splice(HIDDEN_FOREMEN.findIndex(p => sameName(p, hidden)), 1);
-    FOREMEN.push(hidden);
+    unhideForeman(ceh, hidden);
     saveCatalog();
     return hidden;
   }
-  FOREMEN.push(name);
+  const stored = pushForeman(ceh, name);
   saveCatalog();
-  return name;
+  return stored;
 }
-function addForeman(raw, input){
+function addForeman(raw, input, ceh){
+  if(!ceh){ toast("Сначала выберите цех"); return false; }
   const name = normName(raw);
   if(!name){ toast("Введите ФИО мастера цеха"); return false; }
-  const existing = FOREMEN.find(p => sameName(p, name));
-  if(existing){ input.value = existing; toast("Такой мастер уже есть"); return true; }
-  input.value = ensureForeman(name);
-  toast("Мастер цеха добавлен");
+  const existing = visibleForemen(ceh).find(p => sameName(p, name));
+  if(existing){ input.value = existing; toast("Такой мастер уже есть в этом цехе"); return true; }
+  input.value = ensureForeman(ceh, name);
+  toast("Мастер добавлен в этот цех");
   return true;
 }
-function fillForemanList(listEl, filter){
+function fillForemanList(listEl, filter, ceh){
   const q = (filter||"").trim().toLowerCase();
   const typed = normName(filter||"");
-  const all = FOREMEN;
+  const all = ceh ? visibleForemen(ceh) : [];
   const items = q ? all.filter(p => p.toLowerCase().includes(q)) : all.slice();
   const exact = typed && all.some(p => sameName(p, typed));
   let html = "";
-  if(!all.length && !typed) html = `<div class="combo-empty">Пока нет сохранённых мастеров</div>`;
+  if(!ceh) html = `<div class="combo-empty">Сначала выберите цех</div>`;
+  else if(!all.length && !typed) html = `<div class="combo-empty">В этом цехе пока нет мастеров</div>`;
   else if(!items.length) html = `<div class="combo-empty">Нет совпадений</div>`;
   else html = items.slice(0,200).map(p => `<div class="combo-opt" title="${esc(p)}">${esc(p)}</div>`).join("");
-  if(typed && !exact) html += `<button type="button" class="combo-add">Добавить мастера «${esc(typed)}»</button>`;
+  if(ceh && typed && !exact) html += `<button type="button" class="combo-add">Добавить мастера «${esc(typed)}»</button>`;
   listEl.innerHTML = html;
   listEl.classList.add("open");
 }
 const foremanInput = $("#f-foreman"), foremanListEl = $("#foreman-list");
-function openForemanList(){ fillForemanList(foremanListEl, foremanInput.value); }
+function openForemanList(){ fillForemanList(foremanListEl, foremanInput.value, cehSel.value); }
 function closeForemanList(){ foremanListEl.classList.remove("open"); }
 foremanInput.addEventListener("focus", openForemanList);
 foremanInput.addEventListener("input", openForemanList);
 $("#foreman-arrow").addEventListener("mousedown", e => { e.preventDefault(); foremanListEl.classList.contains("open") ? closeForemanList() : openForemanList(); });
 foremanListEl.addEventListener("mousedown", e => {
   const add = e.target.closest(".combo-add");
-  if(add){ e.preventDefault(); addForeman(foremanInput.value, foremanInput); closeForemanList(); return; }
+  if(add){ e.preventDefault(); addForeman(foremanInput.value, foremanInput, cehSel.value); closeForemanList(); return; }
   const opt = e.target.closest(".combo-opt"); if(!opt) return;
   e.preventDefault();
   foremanInput.value = opt.textContent; foremanInput.classList.remove("invalid"); closeForemanList();
 });
-wireAdder($("#add-foreman-open"), $("#add-foreman-row"), $("#add-foreman-name"), $("#add-foreman-ok"), $("#add-foreman-cancel"), raw => addForeman(raw, foremanInput));
+wireAdder($("#add-foreman-open"), $("#add-foreman-row"), $("#add-foreman-name"), $("#add-foreman-ok"), $("#add-foreman-cancel"), raw => addForeman(raw, foremanInput, cehSel.value));
 let resultCeh = "";
 const resForemanInput = $("#res-foreman"), resForemanList = $("#res-foreman-list");
-function openResForemanList(){ fillForemanList(resForemanList, resForemanInput.value); }
+function openResForemanList(){ fillForemanList(resForemanList, resForemanInput.value, resultCeh); }
 function closeResForemanList(){ resForemanList.classList.remove("open"); }
 resForemanInput.addEventListener("focus", openResForemanList);
 resForemanInput.addEventListener("input", openResForemanList);
 $("#res-foreman-arrow").addEventListener("mousedown", e => { e.preventDefault(); resForemanList.classList.contains("open") ? closeResForemanList() : openResForemanList(); });
 resForemanList.addEventListener("mousedown", e => {
   const add = e.target.closest(".combo-add");
-  if(add){ e.preventDefault(); addForeman(resForemanInput.value, resForemanInput); closeResForemanList(); return; }
+  if(add){ e.preventDefault(); addForeman(resForemanInput.value, resForemanInput, resultCeh); closeResForemanList(); return; }
   const opt = e.target.closest(".combo-opt"); if(!opt) return;
   e.preventDefault();
   resForemanInput.value = opt.textContent; closeResForemanList();
 });
-wireAdder($("#add-res-foreman-open"), $("#add-res-foreman-row"), $("#add-res-foreman-name"), $("#add-res-foreman-ok"), $("#add-res-foreman-cancel"), raw => addForeman(raw, resForemanInput));
+wireAdder($("#add-res-foreman-open"), $("#add-res-foreman-row"), $("#add-res-foreman-name"), $("#add-res-foreman-ok"), $("#add-res-foreman-cancel"), raw => addForeman(raw, resForemanInput, resultCeh));
 pointList.addEventListener("mousedown", e => {
+  const done = e.target.closest(".combo-done");
+  if(done){ e.preventDefault(); closePointList(); return; }
   const add = e.target.closest(".combo-add");
   if(add){ e.preventDefault(); addPoint(pointInput.value); return; }
   const opt = e.target.closest(".combo-opt"); if(!opt) return;
   e.preventDefault();
-  pointInput.value = opt.textContent; pointInput.classList.remove("invalid"); closePointList(); syncIndicators();
+  e.stopPropagation();
+  const filtered = normName(pointInput.value) !== "";
+  togglePickedPoint(opt.textContent);
+  if(filtered) openPointList("");
+  else opt.classList.toggle("sel", pickedPoints.some(p => sameName(p, opt.textContent)));
+  keepPointList = true;
 });
+let keepPointList = false;
+document.addEventListener("mousedown", () => { keepPointList = false; }, true);
 document.addEventListener("click", e => {
-  if(!e.target.closest("[data-combo='point']")) closePointList();
+  if(!keepPointList && !e.target.closest("[data-combo='point']")) closePointList();
   if(!e.target.closest("[data-combo='foreman']")) closeForemanList();
   if(!e.target.closest("[data-combo='res-foreman']")) closeResForemanList();
 });
-$("#reset-btn").addEventListener("click", () => { exitEdit(); $("#f-point").value=""; $("#f-foreman").value=""; syncResponsibleField(); ["#f-date","#f-ceh","#f-point","#f-foreman","#f-master"].forEach(s=>$(s).classList.remove("invalid")); syncIndicators(); });
+$("#reset-btn").addEventListener("click", () => { exitEdit(); $("#f-point").value=""; clearPickedPoints(); $("#f-foreman").value=""; syncResponsibleField(); ["#f-date","#f-ceh","#f-point","#f-foreman","#f-master"].forEach(s=>$(s).classList.remove("invalid")); syncIndicators(); });
 ["#f-date","#f-ceh","#f-point","#f-foreman","#f-master"].forEach(sel => $(sel).addEventListener("input", () => $(sel).classList.remove("invalid")));
 $("#f-ceh").addEventListener("change", () => $("#f-ceh").classList.remove("invalid"));
 
@@ -1895,9 +2109,17 @@ let editingId = null;
 $("#add-btn").addEventListener("click", () => {
  try {
   const date=$("#f-date").value, ceh=cehSel.value, master=currentAuthorName();
-  const point = ceh ? ensurePoint(ceh, $("#f-point").value) : $("#f-point").value.trim();
-  const foreman = ensureForeman($("#f-foreman").value);
-  const checks = [["#f-date",date],["#f-ceh",ceh],["#f-point",point],["#f-foreman",foreman],["#f-master",master]];
+  const typed = normName($("#f-point").value);
+  const names = pickedPoints.slice();
+  if(typed && !names.some(p => sameName(p, typed))){
+    const pool = ceh ? visiblePoints(ceh) : [];
+    const exact = pool.some(p => sameName(p, typed));
+    const looksLikeSearch = !exact && pool.some(p => p.toLowerCase().includes(typed.toLowerCase()));
+    if(!looksLikeSearch) names.push(typed);
+  }
+  const points = ceh ? names.map(p => ensurePoint(ceh, p)) : names;
+  const foreman = ensureForeman(ceh, $("#f-foreman").value);
+  const checks = [["#f-date",date],["#f-ceh",ceh],["#f-point",points.length ? "1" : ""],["#f-foreman",foreman],["#f-master",master]];
   checks.forEach(([sel,val]) => $(sel).classList.toggle("invalid", !val));
   const firstEmpty = checks.find(([,val]) => !val);
   if(firstEmpty){
@@ -1906,9 +2128,15 @@ $("#add-btn").addEventListener("click", () => {
     $(firstEmpty[0]).focus();
     return;
   }
-  const rec = { d:date, c:CEHS.indexOf(ceh), p:point, s:".".repeat(IND.length), stage:"taken", master, foreman, by:ME.login||"", id:"u"+Date.now().toString(36)+Math.random().toString(36).slice(2, 8), _new:1 };
-  userEntries.push(rec); save(rec); updateCounts(); toast("Проба взята. Не забудьте занести результаты в журнал.", {ok:true, ms:7000});
-  $("#f-point").value=""; syncResponsibleField(); syncIndicators();
+  const t0 = Date.now();
+  points.forEach((point, i) => {
+    const created = t0 + i;
+    const rec = { d:date, c:CEHS.indexOf(ceh), cn:ceh, p:point, s:".".repeat(IND.length), stage:"taken", master, foreman, by:ME.login||"", id:"u"+created.toString(36)+Math.random().toString(36).slice(2, 8), created_at:new Date(created).toISOString(), _new:1 };
+    userEntries.push(rec); save(rec);
+  });
+  updateCounts();
+  toast(points.length > 1 ? `Взято проб: ${points.length}. Не забудьте занести результаты в журнал.` : "Проба взята. Не забудьте занести результаты в журнал.", {ok:true, ms:7000});
+  $("#f-point").value=""; clearPickedPoints(); syncResponsibleField(); syncIndicators();
  } catch(err){ toast("Ошибка: "+(err&&err.message?err.message:err)); }
 });
 
@@ -1947,7 +2175,7 @@ $("#e-save").addEventListener("click", () => {
   if(!date || !ceh || !point || !master){ toast("Заполните дату, цех, точку и ответственного"); return; }
   const before = cloneProbe(rec);
   const next = cloneProbe(rec);
-  next.d = date; next.c = CEHS.indexOf(ceh); next.p = point; next.master = master;
+  next.d = date; next.c = CEHS.indexOf(ceh); next.cn = ceh; next.p = point; next.master = master;
   const changes = describeProbeChanges(before, next);
   if(!changes.length){ toast("Изменений нет"); return; }
   Object.assign(rec, next);
@@ -2043,6 +2271,21 @@ function journalRowHtml({pr, idx}){
   const detail = open ? `<tr class="det-row"><td colspan="7">${journalDetailHtml(pr)}</td></tr>` : "";
   return main + detail;
 }
+function probeTime(pr){
+  const at = Date.parse(pr && pr.created_at || "");
+  if(!Number.isNaN(at)) return at;
+  const id = String(pr && pr.id || "");
+  if(id.charAt(0)==="u" && id.length>=9){
+    const n = parseInt(id.slice(1, 9), 36);
+    if(n>1e12 && n<4e12) return n;
+  }
+  return 0;
+}
+function probeSeq(pr){
+  const id = String(pr && pr.id || "");
+  if(id.charAt(0)==="u" && id.length>=9) return id.slice(9);
+  return id;
+}
 function renderJournal(){
   renderStatusBar();
   renderCehBar();
@@ -2068,10 +2311,11 @@ function renderJournal(){
     if(na!==nb) return (nb?1:0)-(na?1:0);
     const dc=(b.pr.d||"").localeCompare(a.pr.d||"");
     if(dc!==0) return dc;
-    // в пределах дня: последняя внесённая выше (id хранит момент создания)
-    const at=parseInt(String(a.pr.id||"").replace(/\D/g,""))||0;
-    const bt=parseInt(String(b.pr.id||"").replace(/\D/g,""))||0;
-    return bt-at;
+    const ta=probeTime(a.pr), tb=probeTime(b.pr);
+    if(ta!==tb) return tb-ta;
+    const sa=probeSeq(a.pr), sb=probeSeq(b.pr);
+    if(sa!==sb) return sb.localeCompare(sa);
+    return a.idx-b.idx;
   });
   journalView = rows;
   const total = rows.length;
@@ -2150,7 +2394,7 @@ async function deleteEntry(id){
   save(); updateCounts(); renderJournal();
   toast("Смыв удалён", {ok:true, ms:5000});
 }
-$("#cancel-edit").addEventListener("click", () => { exitEdit(); $("#f-point").value=""; syncResponsibleField(); syncIndicators(); });
+$("#cancel-edit").addEventListener("click", () => { exitEdit(); $("#f-point").value=""; clearPickedPoints(); syncResponsibleField(); syncIndicators(); });
 const _DEC = {".":"—","n":"н/о","x":"обнаружено","e":"повышен","o":"превышение"};
 function probeCells(pr){
   return IND.map((n,i) => {
@@ -2193,7 +2437,7 @@ $("#res-save").addEventListener("click", () => {
   const before = cloneProbe(rec);
   const wasTaken = isTaken(rec);
   const foremanName = normName(resForemanInput.value);
-  rec.foreman = foremanName ? ensureForeman(foremanName) : "";
+  rec.foreman = foremanName ? ensureForeman(resultCeh || CEHS[rec.c] || "", foremanName) : "";
   rec.s = s;
   if(kma!=null) rec.k = kma; else delete rec.k;
   delete rec.stage;
@@ -2311,7 +2555,8 @@ $("#j-restore-file").addEventListener("change", e => {
         if(!res.ok){ toast("Не удалось восстановить копию"); return; }
         if(res.data && res.data.rev) journalRev = res.data.rev;
         applySharedJournal(res.data, true);
-        toast(`Восстановлено записей: ${(res.data.entries||[]).length}`, {ok:true});
+        const n = (res.data && res.data.restored != null) ? res.data.restored : valid.length;
+        toast(`Восстановлено записей: ${n}`, {ok:true});
         return;
       }
       userEntries = valid;
