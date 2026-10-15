@@ -23,10 +23,17 @@ python3 -m venv .venv
 
 ## GitHub self-hosted runner
 
-1. Репозиторий → **Settings** → **Actions** → **Runners** → **New self-hosted runner** (Linux x64).
-2. Каталог, например `~/actions-runner-smyvy`, установка по инструкции GitHub.
-3. Labels при регистрации: `aidev` (плюс стандартные `self-hosted`, `Linux`).
-4. Сервис runner: `./svc.sh install` и `./svc.sh start` (или user-level unit).
+Бинарники уже можно положить в `~/actions-runner-smyvy`. Регистрация (токен живёт ~1 ч):
+
+1. Репозиторий → **Settings** → **Actions** → **Runners** → **New self-hosted runner** → скопировать token.
+2. На aidev:
+
+```bash
+cd /home/devuser/projects/smyvy-quality-journal
+RUNNER_TOKEN='<token>' bash scripts/install-github-runner.sh
+```
+
+Labels: `aidev` (workflow: `runs-on: [self-hosted, aidev]`).
 
 ## GitHub Environment
 
