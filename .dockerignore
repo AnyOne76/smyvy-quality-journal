@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+graphify-out
+__pycache__
+*.pyc
+*.log
+backups
+*.db
+.secret
+.ai_key
+.smtp_config
+.backup_dir
+*.xlsx
+_*
+deploy/README.md

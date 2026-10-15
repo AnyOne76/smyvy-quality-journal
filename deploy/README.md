@@ -1,16 +1,17 @@
 # Деплой на aidev
 
-## systemd (user)
+## Docker (прод)
 
 ```bash
-mkdir -p ~/.config/systemd/user
-cp deploy/smyvy-app.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now smyvy-app.service
-loginctl enable-linger "$USER"
+cd /home/devuser/projects/smyvy-quality-journal
+docker compose up -d --build
+docker compose ps
+curl -I http://10.0.5.173:8020/input
 ```
 
-Проверка: `curl -I http://10.0.5.173:8020/input`
+Данные на хосте в каталоге проекта (volume в `docker-compose.yml`). Политика `restart: unless-stopped` — контейнер поднимается после ребута Docker.
+
+Домен: `deploy/nginx-laboratory-washes.conf.example`.
 
 ## Тесты на сервере
 

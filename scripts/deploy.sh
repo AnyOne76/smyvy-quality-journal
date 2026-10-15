@@ -3,7 +3,7 @@ set -euo pipefail
 
 APP_DIR="${SMYVY_APP_DIR:-/home/devuser/projects/smyvy-quality-journal}"
 HEALTH_URL="${SMYVY_HEALTH_URL:-http://10.0.5.173:8020/input}"
-SERVICE="${SMYVY_SERVICE:-smyvy-app.service}"
+COMPOSE="${COMPOSE:-docker compose}"
 
 cd "$APP_DIR"
 
@@ -23,17 +23,28 @@ else
   python3 -m pytest -q
 fi
 
-echo "==> restart $SERVICE"
-systemctl --user restart "$SERVICE"
+echo "==> docker compose up"
+systemctl --user stop smyvy-app.service 2>/dev/null || true
+systemctl --user disable smyvy-app.service 2>/dev/null || true
+if ss -tlnp 2>/dev/null | grep -q ':8020'; then
+  echo "==> освобождаем порт 8020"
+  fuser -k 8020/tcp 2>/dev/null || true
+  sleep 1
+fi
+
+$COMPOSE build --pull
+$COMPOSE up -d --remove-orphans
 
 echo "==> health $HEALTH_URL"
-for i in 1 2 3 4 5; do
+for i in 1 2 3 4 5 6 7 8 9 10; do
   if curl -sf -o /dev/null "$HEALTH_URL"; then
+    $COMPOSE ps
     echo "==> ok at $(git log -1 --oneline)"
     exit 0
   fi
-  sleep 1
+  sleep 2
 done
 
 echo "health check failed: $HEALTH_URL" >&2
+$COMPOSE logs --tail=40
 exit 1

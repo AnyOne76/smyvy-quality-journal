@@ -1,0 +1,23 @@
+services:
+  smyvy:
+    build: .
+    image: smyvy-quality-journal:local
+    container_name: smyvy-quality-journal
+    restart: unless-stopped
+    ports:
+      - "10.0.5.173:8020:8000"
+    environment:
+      SMYVY_HOST: "0.0.0.0"
+      SMYVY_PORT: "8000"
+    volumes:
+      - ./smyvy_app.db:/app/smyvy_app.db
+      - ./.secret:/app/.secret
+      - ./.ai_key:/app/.ai_key
+      - ./.smtp_config:/app/.smtp_config
+      - ./backups:/app/backups
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://127.0.0.1:8000/input"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s

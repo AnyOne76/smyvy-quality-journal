@@ -210,13 +210,13 @@ python app_server.py
 
 Рабочий процесс — **`app_server.py`** (не `server.py`). См. **README_SERVER.md** (HTTPS, роли).
 
-На **aidev** (`10.0.5.173:8020`, каталог `/home/devuser/projects/smyvy-quality-journal`) обновление с GitHub автоматизировано через Actions (см. ниже). Публичный домен (в работе): **laboratory-washes.kolbasa.ru** → reverse proxy на этот порт.
+На **aidev** (`10.0.5.173:8020`, каталог `/home/devuser/projects/smyvy-quality-journal`) приложение в **Docker** (`docker compose`, `restart: unless-stopped`). Обновление с GitHub — через Actions (см. ниже). Домен **laboratory-washes.kolbasa.ru** → nginx на порт **8020** (пример: `deploy/nginx-laboratory-washes.conf.example`).
 
 ### Автообновление с GitHub (CI/CD)
 
 1. **Тесты** — job `test` на каждый push и PR (`pytest`, см. `requirements-test.txt`).
 2. **Деплой** — только push в `main`, после зелёного `test` и **Approve** в Environment **`production`** (required reviewers в настройках репозитория).
-3. На aidev **self-hosted runner** с labels `self-hosted`, `aidev` выполняет [`scripts/deploy.sh`](scripts/deploy.sh): `git merge --ff-only`, pytest, `systemctl --user restart smyvy-app`.
+3. На aidev **self-hosted runner** выполняет [`scripts/deploy.sh`](scripts/deploy.sh): `git merge --ff-only`, pytest, `docker compose up -d --build`.
 
 Локально:
 
@@ -226,11 +226,11 @@ python3 -m venv .venv
 .venv/bin/pytest -q
 ```
 
-**One-time на aidev:** скопировать [`deploy/smyvy-app.service`](deploy/smyvy-app.service) в `~/.config/systemd/user/`, `systemctl --user enable --now smyvy-app`, `loginctl enable-linger devuser`, venv с тестами в каталоге проекта, зарегистрировать runner в GitHub → Settings → Actions → Runners.
+**One-time на aidev:** Docker + `docker compose`, venv с тестами (`requirements-test.txt`), self-hosted runner (`scripts/install-github-runner.sh`). Данные (`*.db`, `.secret`, `.ai_key`, `.smtp_config`, `backups/`) монтируются в контейнер с хоста.
 
 **При деплое не трогаются** (см. список выше): `smyvy_app.db`, `.secret`, `.ai_key`, `.smtp_config`, `.backup_dir`, `backups/`.
 
-**Откат:** в каталоге приложения `git checkout <коммит>` и `systemctl --user restart smyvy-app`.
+**Откат:** `git checkout <коммит>` и `docker compose up -d --build`.
 
 ## Секреты (не коммитить)
 
