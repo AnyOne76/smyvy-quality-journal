@@ -31,9 +31,13 @@ python3 -m venv .venv
 ```bash
 cd /home/devuser/projects/smyvy-quality-journal
 git pull origin main
-# новый токен обязателен; UPGRADE=1 — перекачать бинарники (минимум GitHub: 2.329.0)
-RUNNER_TOKEN='<token>' UPGRADE=1 bash scripts/install-github-runner.sh
+# Только от devuser, без sudo. Токен — новый с GitHub (Settings → Actions → Runners).
+RUNNER_TOKEN='<token>' bash scripts/install-github-runner.sh
 ```
+
+Перекачать бинарники: `UPGRADE=1`. Перерегистрация: `RECONFIGURE=1`.
+
+Сервис: `systemctl --user status actions-runner-smyvy` (не `./svc.sh` — он требует sudo).
 
 Labels: `aidev` (workflow: `runs-on: [self-hosted, aidev]`).
 

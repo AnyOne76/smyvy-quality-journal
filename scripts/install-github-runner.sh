@@ -1,20 +1,29 @@
 #!/usr/bin/env bash
-# One-time: GitHub → Settings → Actions → Runners → New self-hosted runner → copy token.
-# Usage: RUNNER_TOKEN='...' bash scripts/install-github-runner.sh
-# Upgrade old binaries: RUNNER_TOKEN='...' UPGRADE=1 bash scripts/install-github-runner.sh
+# Регистрация runner: только обычный пользователь (devuser), без sudo.
+# GitHub → Settings → Actions → Runners → New self-hosted runner → token.
+#
+#   RUNNER_TOKEN='...' bash scripts/install-github-runner.sh
+#   RUNNER_TOKEN='...' UPGRADE=1 bash scripts/install-github-runner.sh
+#   RUNNER_TOKEN='...' RECONFIGURE=1 bash scripts/install-github-runner.sh
 set -euo pipefail
 
-REPO_URL="${GITHUB_REPO_URL:-https://github.com/AnyOne76/smyvy-quality-journal}"
-RUNNER_DIR="${RUNNER_DIR:-$HOME/actions-runner-smyvy}"
-# GitHub minimum (2026-02): 2.329.0+
-RUNNER_VERSION="${RUNNER_VERSION:-2.338.0}"
-
-if [[ -z "${RUNNER_TOKEN:-}" ]]; then
-  echo "Set RUNNER_TOKEN from GitHub (New self-hosted runner)." >&2
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "Не запускайте этот скрипт через sudo. Выполните от пользователя devuser." >&2
   exit 1
 fi
 
-mkdir -p "$RUNNER_DIR"
+REPO_URL="${GITHUB_REPO_URL:-https://github.com/AnyOne76/smyvy-quality-journal}"
+RUNNER_DIR="${RUNNER_DIR:-$HOME/actions-runner-smyvy}"
+RUNNER_VERSION="${RUNNER_VERSION:-2.338.0}"
+UNIT_NAME="${RUNNER_UNIT:-actions-runner-smyvy.service}"
+UNIT_DST="$HOME/.config/systemd/user/$UNIT_NAME"
+
+if [[ -z "${RUNNER_TOKEN:-}" ]] && [[ ! -f "$RUNNER_DIR/.runner" ]] && [[ "${RECONFIGURE:-}" == "1" ]]; then
+  echo "Задайте RUNNER_TOKEN (GitHub → Actions → Runners → New self-hosted runner)." >&2
+  exit 1
+fi
+
+mkdir -p "$RUNNER_DIR" "$HOME/.config/systemd/user"
 cd "$RUNNER_DIR"
 
 need_download=0
@@ -22,9 +31,7 @@ if [[ ! -f ./config.sh ]]; then
   need_download=1
 elif [[ "${UPGRADE:-}" == "1" ]]; then
   need_download=1
-  if [[ -f ./svc.sh ]] && [[ -f ./.service ]]; then
-    ./svc.sh stop || true
-  fi
+  systemctl --user stop "$UNIT_NAME" 2>/dev/null || true
 fi
 
 if [[ "$need_download" == "1" ]]; then
@@ -35,14 +42,23 @@ if [[ "$need_download" == "1" ]]; then
   rm -f actions-runner.tar.gz
 fi
 
-if [[ -f ./run.sh ]] && [[ -f ./.runner ]]; then
-  echo "Runner already configured; restarting service."
-  ./svc.sh install 2>/dev/null || true
-  ./svc.sh start
-  exit 0
+if [[ "${RECONFIGURE:-}" == "1" ]] && [[ -f ./.runner ]]; then
+  systemctl --user stop "$UNIT_NAME" 2>/dev/null || true
+  ./config.sh remove --token "$RUNNER_TOKEN" || true
 fi
 
-./config.sh --url "$REPO_URL" --token "$RUNNER_TOKEN" --labels aidev --unattended
-./svc.sh install
-./svc.sh start
-echo "Runner installed in $RUNNER_DIR (v${RUNNER_VERSION})"
+if [[ ! -f ./.runner ]]; then
+  ./config.sh --url "$REPO_URL" --token "$RUNNER_TOKEN" --labels aidev --unattended
+else
+  echo "==> runner уже зарегистрирован в ${RUNNER_DIR} (см. .runner)"
+fi
+
+# User systemd — без sudo (в отличие от ./svc.sh)
+sed "s|%h|$HOME|g" "$(dirname "$0")/../deploy/actions-runner-smyvy.service" > "$UNIT_DST"
+systemctl --user daemon-reload
+systemctl --user enable "$UNIT_NAME"
+systemctl --user restart "$UNIT_NAME"
+loginctl enable-linger "$USER" 2>/dev/null || true
+
+echo "==> $(systemctl --user is-active "$UNIT_NAME") — $UNIT_NAME"
+echo "Проверка: GitHub → Settings → Actions → Runners (Idle, label aidev)"
