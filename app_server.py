@@ -37,7 +37,7 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "1.5.0"
+APP_VERSION = "1.6.0"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
