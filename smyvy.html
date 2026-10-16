@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Смывы · рабочее место службы качества</title>
 <style>
   :root{
@@ -28,10 +29,10 @@
 
   *{box-sizing:border-box;}
   body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.5;}
-  .wrap{max-width:1440px;margin:0 auto;padding:26px 28px 90px;}
+  .wrap{width:100%;margin:0;padding:26px 28px 90px;}
 
   header{border-bottom:1px solid var(--hairline);background:var(--surface);position:sticky;top:0;z-index:30;}
-  .bar{max-width:1440px;margin:0 auto;padding:11px 28px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;}
+  .bar{width:100%;margin:0;padding:11px 28px;display:flex;align-items:center;gap:13px;flex-wrap:wrap;}
   .logo{width:30px;height:30px;border-radius:7px;background:var(--accent);display:grid;place-items:center;flex:none;}
   .logo svg{width:18px;height:18px;}
   .brand b{font-size:14px;font-weight:650;display:block;letter-spacing:-.01em;}
@@ -167,6 +168,10 @@
   .toolbar .ghost{background:var(--surface-2);border:1px solid var(--hairline);color:var(--ink);font-size:12.5px;font-weight:550;padding:9px 13px;border-radius:9px;cursor:pointer;display:inline-flex;gap:6px;align-items:center;}
   .toolbar .ghost:hover{border-color:var(--accent);color:var(--accent);}
   .toolbar .ghost svg{width:15px;height:15px;}
+  .more{position:relative;}
+  .more-list{position:absolute;right:0;top:calc(100% + 6px);z-index:25;display:grid;gap:4px;min-width:190px;padding:6px;background:var(--surface);border:1px solid var(--hairline);border-radius:12px;box-shadow:var(--shadow);}
+  .more-list[hidden]{display:none;}
+  .more-list .ghost{width:100%;justify-content:flex-start;background:transparent;}
 
   .tbl-wrap{overflow-x:auto;border:1px solid var(--hairline);border-radius:14px;background:var(--surface);}
   table{width:100%;border-collapse:collapse;font-size:13px;min-width:680px;}
@@ -174,6 +179,8 @@
   td{padding:10px 12px;border-bottom:1px solid var(--hairline);vertical-align:middle;}
   tr:last-child td{border-bottom:none;}
   td.num{font-family:var(--mono);white-space:nowrap;font-variant-numeric:tabular-nums;}
+  .date-line{display:inline-flex;align-items:center;gap:6px;}
+  .chip.mini{font-size:10px;padding:0 6px;line-height:16px;}
   .chips{display:flex;gap:5px;flex-wrap:wrap;}
   .chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap;}
   .chip.norm{background:var(--good-soft);color:var(--good);}
@@ -210,6 +217,30 @@
   .resbox{width:min(860px,100%);max-height:min(92vh,920px);overflow:auto;background:var(--surface);color:var(--ink);border-radius:16px;padding:22px;box-shadow:0 18px 48px rgba(0,0,0,.28);}
   .resbox h2{margin:0 0 4px;font-size:22px;letter-spacing:-.02em;}
   .resbox .meta{margin:0 0 4px;color:var(--ink-2);font-size:14px;}
+  #res-lock .resbox{display:flex;flex-direction:column;overflow:hidden;width:min(1040px,100%);max-height:calc(100vh - 32px);padding:18px 20px 14px;}
+  #res-lock .resbox .meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #res-lock .field{margin-bottom:8px;}
+  #res-lock .sub-h{margin:4px 0;}
+  #res-inds{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-height:0;overflow:auto;margin-top:6px;padding-right:2px;}
+  #res-inds .ind-row{grid-template-columns:108px 1fr;padding:6px 10px;gap:8px;}
+  #res-inds .seg{flex-wrap:nowrap;}
+  #res-inds .seg button{padding:5px 8px;}
+  #res-inds .ind-row.kma-row{grid-column:1 / -1;grid-template-columns:170px 1fr;}
+  #res-lock .banner{margin-top:8px;padding:8px 12px;}
+  #res-lock .actions{margin-top:8px;flex:none;}
+  th.pickcol, td.pickcol{width:42px;padding-left:12px;padding-right:4px;text-align:center;}
+  th.pickcol input, td.pickcol input{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;}
+  #j-pick-head{background:var(--accent-soft);}
+  #j-pick-all{width:22px;height:22px;accent-color:var(--accent);box-shadow:0 0 0 2px var(--surface), 0 0 0 4px var(--accent);border-radius:4px;}
+  tr.picked td{background:var(--accent-soft);}
+  #v-journal tr.row-bad,#v-journal tr.row-bad td{background:var(--crit-soft);}
+  #v-journal tr.row-warn,#v-journal tr.row-warn td{background:var(--warn-soft);}
+  #v-journal tr.row-new,#v-journal tr.row-new td{background:var(--accent-soft);}
+  #v-journal tr.row-fresh td:first-child{box-shadow:inset 3px 0 0 var(--accent);}
+  #v-journal tr.picked,#v-journal tr.picked td{background:color-mix(in srgb, var(--accent) 18%, var(--surface));}
+  .pickbar{display:flex;align-items:center;gap:12px;margin:0 0 12px;}
+  .pickbar[hidden]{display:none;}
+  .pickbar span{font-size:13.5px;font-weight:650;}
   tr.det-row td{background:var(--surface-2);padding:0;border-bottom:1px solid var(--hairline);}
   .det-wrap{padding:14px 16px 16px;}
   .det-title{font-size:12px;font-weight:650;color:var(--ink-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;}
@@ -226,8 +257,10 @@
   .det-changes{margin-top:14px;padding-top:12px;border-top:1px solid var(--hairline);}
   .det-changes ul{margin:8px 0 0;padding-left:18px;}
   .det-changes li{font-size:12.5px;color:var(--ink);margin:4px 0;}
+  .det-edit{margin-top:12px;}
+  .det-edit .det-who{font-size:12.5px;font-weight:650;}
+  .det-edit ul{margin-top:4px;}
   .resp-note{display:block;margin-top:4px;font-size:11.5px;color:var(--warning);font-weight:600;}
-  .resp-change{display:block;margin-top:3px;font-size:11.5px;color:var(--ink-2);line-height:1.35;}
   .edit-note{display:flex;align-items:center;gap:9px;margin-top:16px;padding:11px 14px;border-radius:11px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:550;}
   .edit-note svg{width:16px;height:16px;flex:none;}
   .edit-note .link{color:var(--accent);margin-left:auto;}
@@ -281,12 +314,28 @@
   .sf-btn:hover{border-color:var(--accent);color:var(--accent);}
   .sf-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
   .sf-sep{width:1px;height:20px;background:var(--hairline);margin:0 4px;}
+  .stat-filters input[type=date]{width:auto;padding:5px 8px;font-size:12.5px;font-weight:600;border-radius:8px;background:var(--surface);}
+  .stat-filters input[type=date].on{border-color:var(--accent);background:var(--accent-soft);}
+  .sf-dash{color:var(--muted);font-size:13px;}
   .stat-tools{display:grid;grid-template-columns:1.2fr .8fr;gap:14px;margin-bottom:18px;}
   .tool-card{background:var(--surface);border:1px solid var(--hairline);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);}
   .tool-card h3{margin:0 0 4px;font-size:14px;font-weight:650;}
   .tool-card p{margin:0 0 12px;font-size:12px;color:var(--muted);}
   .mode-row,.compare-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .tool-select{border:1px solid var(--hairline);background:var(--surface);color:var(--ink);border-radius:8px;padding:8px 10px;font-size:13px;}
+  .compare-row{margin-bottom:10px;}
+  .compare-row .tool-select{flex:1;min-width:120px;}
+  .compare-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr 0.9fr;gap:0;border:1px solid var(--hairline);border-radius:12px;overflow:hidden;font-size:12.5px;}
+  .compare-grid div{padding:8px 10px;border-bottom:1px solid var(--hairline);border-right:1px solid var(--hairline);}
+  .compare-grid div:nth-child(4n){border-right:none;}
+  .compare-grid .head{background:var(--surface-2);font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+  .compare-grid .lab{font-weight:600;color:var(--ink-2);}
+  .compare-grid .num{font-variant-numeric:tabular-nums;font-weight:700;}
+  .compare-grid .up{color:var(--critical);}
+  .compare-grid .down{color:var(--good);}
+  .compare-grid .flat{color:var(--muted);}
+  .compare-note{margin:10px 0 0;font-size:13px;line-height:1.45;color:var(--ink);}
+  .compare-empty{margin:0;font-size:13px;color:var(--muted);}
   .compare-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 10px;font-size:12px;font-weight:700;}
   .compare-badge.good{background:var(--good-soft);color:var(--good);}
   .compare-badge.bad{background:var(--crit-soft);color:var(--critical);}
@@ -307,6 +356,21 @@
   .drill-kpi{background:var(--surface-2);border:1px solid var(--hairline);border-radius:12px;padding:14px 18px;flex:1 1 120px;}
   .drill-kpi .dk-label{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:700;margin-bottom:4px;}
   .drill-kpi .dk-val{font-size:26px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums;}
+  .day-sum{margin:0 0 18px;padding:12px 14px;border-radius:12px;background:var(--surface-2);border:1px solid var(--hairline);font-size:14px;line-height:1.5;color:var(--ink);}
+  .day-sum b{font-weight:700;}
+  .day-block{margin:18px 0 8px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .day-ceh{display:grid;gap:8px;margin-bottom:16px;}
+  .day-ceh-row{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid var(--hairline);border-radius:10px;background:var(--surface-2);flex-wrap:wrap;}
+  .day-ceh-row .name{font-weight:650;}
+  .day-ceh-row .meta{font-size:12.5px;color:var(--ink-2);}
+  .day-table td.res-bad{color:var(--critical);font-weight:700;}
+  .day-table td.res-warn{color:var(--warning);font-weight:700;}
+  .day-table td.res-norm{color:var(--good);font-weight:650;}
+  .day-table td.res-taken{color:var(--ink-2);font-weight:600;}
+  .day-table .detail{display:block;margin-top:3px;font-size:12px;font-weight:500;color:var(--ink-2);}
+  .day-table tr.issue{background:var(--crit-soft);}
+  .day-table tr.raise{background:var(--warn-soft);}
+  .day-copy{margin:0 0 14px;}
   body.modal-open{overflow:hidden;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
   /* Активный бар в графике */
@@ -365,9 +429,69 @@
   @media (max-width:900px){.stat-tools{grid-template-columns:1fr;}}
   @media (max-width:720px){.kpis{grid-template-columns:repeat(2,1fr);}.stat-row.c2,.stat-row.c3{grid-template-columns:1fr;}.lm-item{border-right:none;border-bottom:1px solid var(--hairline);}.lm-item:last-child{border-bottom:none;}}
   @media (max-width:900px){.grid2{grid-template-columns:1fr;}}
-  @media (max-width:760px){.ind-row{grid-template-columns:1fr;gap:8px;}.tabs{margin-left:0;order:5;width:100%;}.brand{order:2;}}
-  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr);}.tab span.t{display:none;}}
-  @media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+    @media (max-width:760px){.ind-row{grid-template-columns:1fr;gap:8px;}#res-inds{grid-template-columns:1fr;}.tabs{margin-left:0;order:5;width:100%;flex-wrap:wrap;}.brand{order:2;}}
+  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:900px){
+    #v-journal .tbl-wrap{overflow:visible;border:none;background:transparent;border-radius:0;}
+    #v-journal table{min-width:0;}
+    #v-journal thead{display:none;}
+    #v-journal tbody tr{
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      grid-template-areas:"pick date act" "point point point" "ceh ceh ceh" "foreman foreman foreman" "res res res" "resp resp resp";
+      gap:2px 10px;
+      background:var(--surface);
+      border:1px solid var(--hairline);
+      border-radius:14px;
+      margin:0 0 10px;
+      padding:12px 14px;
+    }
+    #v-journal tbody td{display:block;border:none;padding:0;background:transparent;}
+    #v-journal td.pickcol{grid-area:pick;align-self:center;}
+    #v-journal td.pickcol input{width:22px;height:22px;}
+    #v-journal td.num{grid-area:date;align-self:center;font-weight:650;}
+    #v-journal td.j-act{grid-area:act;justify-self:end;}
+    #v-journal td.j-point{grid-area:point;font-size:15px;font-weight:650;margin-top:4px;}
+    #v-journal td.j-ceh{grid-area:ceh;}
+    #v-journal td.j-foreman{grid-area:foreman;}
+    #v-journal td.j-res{grid-area:res;margin-top:6px;}
+    #v-journal td.j-resp{grid-area:resp;}
+    #v-journal td.j-ceh::before{content:"Цех";}
+    #v-journal td.j-foreman::before{content:"Мастер";}
+    #v-journal td.j-resp::before{content:"Ответственный";}
+    #v-journal td.j-ceh::before,#v-journal td.j-foreman::before,#v-journal td.j-resp::before{
+      display:block;margin-top:8px;font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);font-weight:600;
+    }
+    #v-journal tr.picked{background:var(--accent-soft);}
+    #v-journal tr.det-row{display:block;padding:0 2px 8px;border:none;background:transparent;margin:-4px 0 10px;}
+    #v-journal tr.det-row td{display:block;}
+    #v-journal tr.empty-row,#v-journal tr:has(td.empty){display:block;padding:16px;}
+  }
+  @media (min-width:700px) and (max-width:900px){
+    #v-journal tbody tr{
+      grid-template-areas:"pick date act" "point point point" "ceh foreman foreman" "res res res" "resp resp resp";
+    }
+  }
+  @media (max-width:760px){
+    .wrap{padding:16px 14px 72px;}
+    .bar{padding:10px 14px;}
+    .reslock{padding:12px;}
+    .resbox{padding:16px;max-height:calc(100vh - 24px);}
+    .pickbar{flex-wrap:wrap;}
+  }
+  @media (min-width:901px){
+    #v-journal table{table-layout:fixed;}
+    #v-journal .pickcol{width:3%;}
+    #v-journal th.j-date,#v-journal td.num{width:11%;}
+    #v-journal .j-ceh{width:14%;}
+    #v-journal .j-point{width:20%;}
+    #v-journal .j-foreman{width:13%;}
+    #v-journal .j-res{width:12%;}
+    #v-journal .j-resp{width:14%;}
+    #v-journal .j-act{width:13%;}
+    #v-journal td.j-ceh,#v-journal td.j-point,#v-journal td.j-foreman,#v-journal td.j-resp{overflow-wrap:anywhere;}
+    #v-journal td.j-act .rowact{flex-wrap:wrap;justify-content:flex-end;}
+  }
   /* экран входа */
   .lock{position:fixed;inset:0;z-index:100;background:var(--plane);display:flex;align-items:center;justify-content:center;padding:24px;}
   .lock.hidden{display:none;}
@@ -501,12 +625,22 @@
     </div>
     <div class="toolbar">
       <input class="search" id="j-search" placeholder="🔍 поиск по точке, цеху…">
-      <button class="ghost" id="j-csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Excel / CSV</button>
-      <button class="ghost" id="j-backup" title="Сохранить резервную копию введённых записей"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Копия</button>
-      <button class="ghost" id="j-restore" title="Восстановить записи из копии"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg>Восстановить</button>
+      <div class="more" id="j-tools">
+        <button type="button" class="ghost" id="j-tools-btn" aria-expanded="false">Ещё</button>
+        <div class="more-list" id="j-tools-list" hidden>
+          <button class="ghost" id="j-csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m0 0 4-4m-4 4-4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Excel / CSV</button>
+          <button class="ghost" id="j-backup" title="Сохранить резервную копию введённых записей"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>Копия</button>
+          <button class="ghost" id="j-restore" title="Восстановить записи из копии"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7L3 8m0-5v5h5"/></svg>Восстановить</button>
+        </div>
+      </div>
       <input type="file" id="j-restore-file" accept=".json,application/json" class="filepick" tabindex="-1">
     </div>
-    <div class="tbl-wrap"><table><thead><tr><th>Дата</th><th>Цех</th><th>Точка отбора</th><th>Мастер цеха</th><th>Результаты</th><th>Ответственный</th><th></th></tr></thead><tbody id="j-body"></tbody></table></div>
+    <div class="pickbar" id="j-pickbar" hidden>
+      <span id="j-pick-count">Выбрано: 0</span>
+      <button type="button" class="resbtn" id="j-pick-results">Внести результаты</button>
+      <button type="button" class="link" id="j-pick-clear">Снять отметки</button>
+    </div>
+    <div class="tbl-wrap"><table><thead><tr><th class="pickcol" id="j-pick-head"><input type="checkbox" id="j-pick-all" aria-label="Отметить все смывы без результатов"></th><th class="j-date">Дата</th><th class="j-ceh">Цех</th><th class="j-point">Точка отбора</th><th class="j-foreman">Мастер цеха</th><th class="j-res">Результаты</th><th class="j-resp">Ответственный</th><th class="j-act"></th></tr></thead><tbody id="j-body"></tbody></table></div>
     <p class="rowcap" id="j-cap"></p>
     <button type="button" class="ghost" id="j-more" hidden>Показать ещё</button>
   </section>
@@ -523,6 +657,11 @@
       <button class="sf-btn" data-period="2026">2026</button>
       <button class="sf-btn" data-period="6m">6 месяцев</button>
       <button class="sf-btn" data-period="3m">3 месяца</button>
+      <span class="sf-sep"></span>
+      <span class="sf-label">Дни:</span>
+      <input type="date" id="stat-from" aria-label="Дата начала">
+      <span class="sf-dash">—</span>
+      <input type="date" id="stat-to" aria-label="Дата конца">
     </div>
 
     <div class="stat-tools">
@@ -538,12 +677,12 @@
       </div>
       <div class="tool-card">
         <h3>Сравнение месяцев</h3>
-        <p>Выберите два месяца и сразу увидите, где стало лучше или хуже.</p>
+        <p>Сравните два месяца: пробы, нарушения, повышенные и соответствие.</p>
         <div class="compare-row">
-          <select class="tool-select" id="cmp-a"></select>
-          <select class="tool-select" id="cmp-b"></select>
-          <div id="cmp-summary"></div>
+          <select class="tool-select" id="cmp-a" aria-label="Первый месяц"></select>
+          <select class="tool-select" id="cmp-b" aria-label="Второй месяц"></select>
         </div>
+        <div id="cmp-summary"></div>
       </div>
     </div>
 
@@ -592,7 +731,7 @@
     <div class="stat-row c2">
       <div class="chart-card">
         <h3>Контроль по цехам</h3>
-        <p class="note">Число проб за всё время наблюдений</p>
+        <p class="note" id="ch-ceh-note">Число проб за всё время наблюдений</p>
         <svg class="chart" id="ch-ceh"></svg>
       </div>
       <div class="chart-card">
@@ -614,7 +753,7 @@
     <!-- Закономерности и сигналы -->
     <div class="stat-sec">
       <h2>Закономерности и сигналы</h2>
-      <p class="ssub">Автоматически выявленные паттерны по всей базе данных</p>
+      <p class="ssub" id="insights-note">Автоматически выявленные паттерны по всей базе данных</p>
       <div class="grid3" id="insights"></div>
     </div>
 
@@ -734,7 +873,7 @@
   <div class="resbox" role="dialog" aria-labelledby="res-title">
     <h2 id="res-title">Результаты смыва</h2>
     <p class="meta" id="res-meta"></p>
-    <div class="field" style="margin:0 0 14px">
+    <div class="field">
       <div class="lbl-row"><label class="lbl" for="res-foreman">Мастер цеха</label><button type="button" class="addmini" id="add-res-foreman-open">Добавить мастера</button></div>
       <div class="combo" data-combo="res-foreman"><input id="res-foreman" placeholder="начните вводить или выберите" autocomplete="off"><span class="arrow" id="res-foreman-arrow"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg></span><div class="combo-list" id="res-foreman-list"></div></div>
       <div class="addrow" id="add-res-foreman-row"><input id="add-res-foreman-name" placeholder="ФИО нового мастера" maxlength="120"><button type="button" class="addok" id="add-res-foreman-ok">Добавить</button><button type="button" class="addcancel" id="add-res-foreman-cancel">Отмена</button></div>
@@ -1681,7 +1820,7 @@ function renderStatusBar(){
     c.all++; const fl=probeFlags(pr);
     if(isTaken(pr)) c.taken++;
     if(fl.bad.length) c.bad++; if(fl.over.length) c.over++;
-    if(fl.elev.length) c.elev++; if(pr._new) c["new"]++; });
+    if(fl.elev.length) c.elev++; if(isNew(pr)) c["new"]++; });
   const defs = [
     {k:"", label:"Все", n:c.all, col:""},
     {k:"taken", label:"Смыв взят", n:c.taken, col:"var(--accent)"},
@@ -1722,6 +1861,7 @@ function buildIndicators(ceh, pr){
     const row = document.createElement("div");
     row.className = "ind-row";
     if(name==="КМАФАнМ"){
+      row.classList.add("kma-row");
       indState[name] = {mode:"norm", below:true, mant:1.5, exp:2};
       row.innerHTML = `<div class="ind-name">КМАФАнМ<span class="norm">лимит 1×10³ КОЕ/см²</span></div>
         <div class="kma">
@@ -2179,9 +2319,7 @@ $("#e-save").addEventListener("click", () => {
   const changes = describeProbeChanges(before, next);
   if(!changes.length){ toast("Изменений нет"); return; }
   Object.assign(rec, next);
-  rec.edited_by = ME.full_name || ME.login || master;
-  rec.edited_at = new Date().toISOString();
-  rec.last_edit_changes = changes;
+  rememberEdit(rec, ME.full_name || ME.login || master, new Date().toISOString(), changes);
   save(rec); updateCounts(); closeEdit();
   if($("#v-journal").classList.contains("on")) renderJournal();
   toast("Изменения сохранены", {ok:true, ms:5000});
@@ -2207,6 +2345,44 @@ function probeFlags(pr){
   return {bad, over, elev};
 }
 function isTaken(pr){ return !!(pr && pr.stage==="taken"); }
+function isNew(pr){
+  if(!pr || !pr._new) return false;
+  const at = probeTime(pr);
+  if(!at) return false;
+  const a = new Date(at), b = new Date();
+  return a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+}
+function isResultNote(list){
+  return Array.isArray(list) && list.length === 1 && list[0] === "Внесены результаты смыва";
+}
+function editHistory(pr){
+  if(!pr) return [];
+  const raw = Array.isArray(pr.edit_history) ? pr.edit_history.filter(x => x && typeof x === "object") : [];
+  if(raw.length){
+    return raw.filter(x => !isResultNote(x.changes)).map(x => ({
+      at: x.at || "",
+      by: x.by || "",
+      changes: Array.isArray(x.changes) ? x.changes.slice() : []
+    }));
+  }
+  if(!pr.edited_by || isResultNote(pr.last_edit_changes)) return [];
+  return [{
+    at: pr.edited_at || "",
+    by: pr.edited_by || "",
+    changes: Array.isArray(pr.last_edit_changes) ? pr.last_edit_changes.slice() : []
+  }];
+}
+function isCorrection(pr){ return editHistory(pr).length > 0; }
+function rememberEdit(rec, by, at, changes){
+  const hist = editHistory(rec);
+  const next = {at, by, changes: changes.slice()};
+  const last = hist[hist.length - 1];
+  if(!(last && last.at === at && JSON.stringify(last.changes) === JSON.stringify(next.changes))) hist.push(next);
+  rec.edit_history = hist;
+  rec.edited_by = by;
+  rec.edited_at = at;
+  rec.last_edit_changes = changes;
+}
 function probeMatchesStatus(pr, fs){
   if(!fs) return true;
   const fl = probeFlags(pr);
@@ -2214,12 +2390,13 @@ function probeMatchesStatus(pr, fs){
   if(fs==="bad")  return fl.bad.length>0;
   if(fs==="over") return fl.over.length>0;
   if(fs==="elev") return fl.elev.length>0;
-  if(fs==="new")  return !!pr._new;
+  if(fs==="new")  return isNew(pr);
   return true;
 }
 function updateCounts(){ $("#tab-count").textContent = allProbes().length.toLocaleString("ru"); }
 
 let jExpanded = new Set();
+let journalPick = new Set();
 let journalView = [];
 let journalShown = 0;
 const JOURNAL_FIRST = 80;
@@ -2235,40 +2412,74 @@ function indicatorDetail(pr, i){
 function journalDetailHtml(pr){
   if(isTaken(pr)) return `<div class="det-wrap"><div class="det-wait">Смыв взят. Ожидается занесение результатов.</div></div>`;
   const items = IND.map((_, i) => indicatorDetail(pr, i));
-  const changes = Array.isArray(pr.last_edit_changes) && pr.last_edit_changes.length
-    ? `<div class="det-changes"><div class="det-title">Что изменили в последней правке</div><ul>${pr.last_edit_changes.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`
-    : pr.edited_by
-    ? `<div class="det-changes"><div class="det-title">Что изменили в последней правке</div><div class="det-st">Подробности этой правки не сохранились. История изменений начала записываться только после последнего обновления.</div></div>`
-    : "";
+  const hist = editHistory(pr).slice().reverse();
+  const changes = hist.length ? `<div class="det-changes"><div class="det-title">История правок</div>${hist.map(item => {
+    const who = `${esc(item.by || "—")}${fmtDateTime(item.at) ? " · " + esc(fmtDateTime(item.at)) : ""}`;
+    const body = item.changes.length
+      ? `<ul>${item.changes.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
+      : `<div class="det-st">Подробности этой правки не сохранились.</div>`;
+    return `<div class="det-edit"><div class="det-who">${who}</div>${body}</div>`;
+  }).join("")}</div>` : "";
   return `<div class="det-wrap"><div class="det-title">Показатели пробы</div><div class="det-grid">${
     items.map(it => `<div class="det-item ${it.state}"><div class="det-name">${esc(it.ind)}</div><div class="det-val">${esc(it.val)}</div><div class="det-st">${esc(it.status)}</div></div>`).join("")
   }</div>${changes}</div>`;
 }
-function shortEditSummary(pr){
-  if(!Array.isArray(pr.last_edit_changes) || !pr.last_edit_changes.length) return "";
-  return pr.last_edit_changes.map(x => `<span class="resp-change">${esc(x)}</span>`).join("");
+function journalCols(){ return can("edit") ? 8 : 7; }
+function syncJournalPick(){
+  const alive = new Set(userEntries.filter(r => r && isTaken(r) && r.id).map(r => r.id));
+  journalPick.forEach(id => { if(!alive.has(id)) journalPick.delete(id); });
+  const head = $("#j-pick-head");
+  if(head) head.hidden = !can("edit");
+  const bar = $("#j-pickbar");
+  const n = journalPick.size;
+  if(bar){
+    bar.hidden = !can("edit") || n === 0;
+    const label = $("#j-pick-count");
+    if(label) label.textContent = `Выбрано: ${n}`;
+  }
+  const allBox = $("#j-pick-all");
+  if(allBox){
+    const visible = journalView.slice(0, journalShown).filter(r => isTaken(r.pr) && can("edit"));
+    const on = visible.filter(r => journalPick.has(r.pr.id)).length;
+    allBox.disabled = !visible.length;
+    allBox.checked = visible.length > 0 && on === visible.length;
+    allBox.indeterminate = on > 0 && on < visible.length;
+  }
+}
+function shortPerson(name){
+  const full = String(name || "").trim();
+  if(!full || full === "—") return {full: full || "—", short: full || "—"};
+  const parts = full.split(/\s+/);
+  if(parts.length < 2) return {full, short: full};
+  const initials = parts.slice(1).map(p => (p.charAt(0) || "").toUpperCase() + ".").join(" ");
+  return {full, short: parts[0] + " " + initials};
+}
+function resultChip(pr){
+  if(isTaken(pr)) return `<span class="chip taken">Смыв взят</span>`;
+  const fl = probeFlags(pr);
+  const bad = fl.bad.length + fl.over.length;
+  if(bad) return `<span class="chip bad">несоответствие · ${bad}</span>`;
+  if(fl.elev.length) return `<span class="chip warn">повышенный</span>`;
+  return `<span class="chip norm">норма</span>`;
 }
 function journalRowHtml({pr, idx}){
-  const fl = probeFlags(pr), chips=[];
-  if(pr._new) chips.push(`<span class="chip new">новая</span>`);
-  if(isTaken(pr)) chips.push(`<span class="chip taken">Смыв взят</span>`);
-  else {
-    fl.bad.forEach(n => chips.push(`<span class="chip bad">${n}: обнаружено</span>`));
-    fl.over.forEach(() => chips.push(`<span class="chip over">КМАФАнМ ${(pr.k||0).toLocaleString("ru")} · превышение</span>`));
-    fl.elev.forEach(() => chips.push(`<span class="chip warn">КМАФАнМ ${(pr.k||0).toLocaleString("ru")}</span>`));
-    if(!fl.bad.length && !fl.over.length && !fl.elev.length) chips.push(`<span class="chip norm">норма</span>`);
-  }
   const d = pr.d ? pr.d.split("-").reverse().join(".") : "—";
+  const fresh = isNew(pr) ? `<span class="chip new mini">новая</span>` : "";
   const editStamp = fmtDateTime(pr.edited_at);
-  const changeSummary = shortEditSummary(pr);
-  const resp = `${esc(pr.master||"—")}${pr.edited_by ? `<span class="resp-note" title="Последняя правка: ${esc(pr.edited_by)}${editStamp ? " · "+esc(editStamp) : ""}">правка: ${esc(pr.edited_by)}${editStamp ? ` · ${esc(editStamp)}` : ""}</span>${changeSummary}` : ""}`;
+  const person = shortPerson(pr.master || "—");
+  const resp = `<span title="${esc(person.full)}">${esc(person.short)}</span>${isCorrection(pr) ? `<span class="resp-note" title="Последняя правка: ${esc(pr.edited_by)}${editStamp ? " · "+esc(editStamp) : ""}">правка${editStamp ? ` · ${esc(editStamp)}` : ""}</span>` : ""}`;
   const key = String(idx);
   const open = jExpanded.has(key);
   const resBtn = (isTaken(pr) && can("edit")) ? `<button type="button" class="resbtn" data-res="${esc(pr.id)}">Результаты</button>` : "";
   const actBtns = resBtn + ((pr._new && can("edit")) ? `<button class="edt" data-edit="${pr.id}" title="Редактировать"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button><button class="del" data-id="${pr.id}" title="Удалить">✕</button>` : "");
   const act = `<div class="rowact"><button class="jexp ${open?"on":""}" data-exp="${key}" title="${open?"Скрыть показатели":"Показать показатели"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></button>${actBtns}</div>`;
-  const main = `<tr><td class="num">${d}</td><td>${esc(CEHS[pr.c])}</td><td>${esc(pr.p)}</td><td>${esc(pr.foreman||"—")}</td><td><div class="chips">${chips.join("")}</div></td><td>${resp}</td><td>${act}</td></tr>`;
-  const detail = open ? `<tr class="det-row"><td colspan="7">${journalDetailHtml(pr)}</td></tr>` : "";
+  const pick = (isTaken(pr) && can("edit"))
+    ? `<td class="pickcol"><input type="checkbox" data-pick="${esc(pr.id)}"${journalPick.has(pr.id) ? " checked" : ""} aria-label="Выбрать точку"></td>`
+    : (can("edit") ? `<td class="pickcol"></td>` : "");
+  const tone = isTaken(pr) ? (isNew(pr) ? "row-new" : "") : (probeFlags(pr).bad.length || probeFlags(pr).over.length ? "row-bad" : probeFlags(pr).elev.length ? "row-warn" : "");
+  const rowCls = [tone, isNew(pr) && tone !== "row-new" ? "row-fresh" : "", journalPick.has(pr.id) ? "picked" : ""].filter(Boolean).join(" ");
+  const main = `<tr class="${rowCls}">${pick}<td class="num"><span class="date-line">${d}${fresh}</span></td><td class="j-ceh">${esc(CEHS[pr.c])}</td><td class="j-point">${esc(pr.p)}</td><td class="j-foreman">${esc(pr.foreman||"—")}</td><td class="j-res"><div class="chips">${resultChip(pr)}</div></td><td class="j-resp">${resp}</td><td class="j-act">${act}</td></tr>`;
+  const detail = open ? `<tr class="det-row"><td colspan="${journalCols()}">${journalDetailHtml(pr)}</td></tr>` : "";
   return main + detail;
 }
 function probeTime(pr){
@@ -2301,13 +2512,13 @@ function renderJournal(){
       if(fs==="over" && !fl.over.length) return;
       if(fs==="elev" && !fl.elev.length) return;
     } else if(fs==="taken" && !isTaken(pr)) return;
-    else if(fs==="new" && !pr._new) return;
+    else if(fs==="new" && !isNew(pr)) return;
     if(q){ const hay=(CEHS[pr.c]+" "+pr.p+" "+(pr.foreman||"")).toLowerCase(); if(!hay.includes(q)) return; }
     rows.push({pr, idx});
   });
   // порядок: новые сверху → по дате (свежие выше) → в пределах дня последняя внесённая выше
   rows.sort((a,b) => {
-    const na=!!a.pr._new, nb=!!b.pr._new;
+    const na=isNew(a.pr), nb=isNew(b.pr);
     if(na!==nb) return (nb?1:0)-(na?1:0);
     const dc=(b.pr.d||"").localeCompare(a.pr.d||"");
     if(dc!==0) return dc;
@@ -2321,15 +2532,17 @@ function renderJournal(){
   const total = rows.length;
   const moreBtn = $("#j-more");
   if(!total){
-    body.innerHTML=`<tr><td colspan="7" class="empty">Ничего не найдено по заданным фильтрам.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="${journalCols()}" class="empty">Ничего не найдено по заданным фильтрам.</td></tr>`;
     $("#j-cap").textContent="";
     if(moreBtn) moreBtn.hidden = true;
+    syncJournalPick();
     return;
   }
   journalShown = Math.min(JOURNAL_FIRST, total);
   body.innerHTML = rows.slice(0, journalShown).map(journalRowHtml).join("");
   $("#j-cap").textContent = `Записей: ${total.toLocaleString("ru")}`;
   if(moreBtn) moreBtn.hidden = journalShown >= total;
+  syncJournalPick();
 }
 function showMoreJournal(){
   const rows = journalView;
@@ -2339,12 +2552,65 @@ function showMoreJournal(){
   journalShown = next;
   const moreBtn = $("#j-more");
   if(moreBtn) moreBtn.hidden = journalShown >= rows.length;
+  syncJournalPick();
 }
 $("#j-more").addEventListener("click", showMoreJournal);
 let journalSearchTimer = null;
 $("#j-search").addEventListener("input", () => {
   clearTimeout(journalSearchTimer);
   journalSearchTimer = setTimeout(renderJournal, 180);
+});
+const toolsBtn = $("#j-tools-btn");
+const toolsList = $("#j-tools-list");
+function closeTools(){
+  if(!toolsList) return;
+  toolsList.hidden = true;
+  if(toolsBtn) toolsBtn.setAttribute("aria-expanded", "false");
+}
+if(toolsBtn && toolsList){
+  toolsBtn.addEventListener("click", e => {
+    e.stopPropagation();
+    toolsList.hidden = !toolsList.hidden;
+    toolsBtn.setAttribute("aria-expanded", toolsList.hidden ? "false" : "true");
+  });
+  toolsList.addEventListener("click", closeTools);
+  document.addEventListener("click", e => { if(!e.target.closest("#j-tools")) closeTools(); });
+  document.addEventListener("keydown", e => { if(e.key === "Escape") closeTools(); });
+}
+$("#j-body").addEventListener("change", e => {
+  const box = e.target.closest("input[data-pick]");
+  if(!box) return;
+  const id = box.dataset.pick;
+  if(box.checked) journalPick.add(id); else journalPick.delete(id);
+  const tr = box.closest("tr");
+  if(tr) tr.classList.toggle("picked", box.checked);
+  syncJournalPick();
+});
+$("#j-pick-all").addEventListener("change", () => {
+  const on = $("#j-pick-all").checked;
+  journalView.slice(0, journalShown).forEach(({pr}) => {
+    if(!isTaken(pr) || !can("edit")) return;
+    if(on) journalPick.add(pr.id); else journalPick.delete(pr.id);
+  });
+  document.querySelectorAll("#j-body input[data-pick]").forEach(box => {
+    box.checked = journalPick.has(box.dataset.pick);
+    const tr = box.closest("tr");
+    if(tr) tr.classList.toggle("picked", box.checked);
+  });
+  syncJournalPick();
+});
+$("#j-pick-clear").addEventListener("click", () => {
+  journalPick.clear();
+  document.querySelectorAll("#j-body input[data-pick]").forEach(box => {
+    box.checked = false;
+    const tr = box.closest("tr");
+    if(tr) tr.classList.remove("picked");
+  });
+  syncJournalPick();
+});
+$("#j-pick-results").addEventListener("click", () => {
+  const id = [...journalPick][0];
+  if(id) openResults(id);
 });
 $("#j-body").addEventListener("click", e => {
   const exp = e.target.closest("[data-exp]");
@@ -2358,7 +2624,7 @@ $("#j-body").addEventListener("click", e => {
     } else {
       jExpanded.add(key);
       const item = journalView.find(r => String(r.idx) === key);
-      if(main && item) main.insertAdjacentHTML("afterend", `<tr class="det-row"><td colspan="7">${journalDetailHtml(item.pr)}</td></tr>`);
+      if(main && item) main.insertAdjacentHTML("afterend", `<tr class="det-row"><td colspan="${journalCols()}">${journalDetailHtml(item.pr)}</td></tr>`);
     }
     const open = jExpanded.has(key);
     exp.classList.toggle("on", open);
@@ -2405,17 +2671,33 @@ function probeCells(pr){
 }
 function probeStatus(pr){ if(isTaken(pr)) return "Смыв взят"; const fl=probeFlags(pr); return fl.bad.length||fl.over.length?"несоответствие":fl.elev.length?"повышенный":"норма"; }
 let resultId = null;
+let resultIds = [];
+let resultForemanStart = "";
 function openResults(id, editing){
   const rec = userEntries.find(r => r.id===id);
   if(!rec) return;
   if(!editing && !isTaken(rec)) return;
   resultId = id;
+  resultIds = editing ? [id] : (journalPick.has(id)
+    ? [...journalPick].filter(pid => { const r = userEntries.find(x => x.id===pid); return r && isTaken(r); })
+    : [id]);
+  if(!resultIds.length) resultIds = [id];
   resultCeh = CEHS[rec.c] || "";
   const title = $("#res-title");
   const saveBtn = $("#res-save");
   if(title) title.textContent = editing ? "Редактировать показатели" : "Результаты смыва";
   if(saveBtn) saveBtn.textContent = editing ? "Сохранить изменения" : "Сохранить результаты";
-  $("#res-meta").textContent = `${fmtDate(rec.d)} · ${CEHS[rec.c]||""} · ${rec.p}`;
+  if(resultIds.length > 1){
+    const names = resultIds.map(pid => userEntries.find(r => r.id===pid)).filter(Boolean).map(r => r.p);
+    const meta = $("#res-meta");
+    meta.textContent = `Одинаковые результаты для ${resultIds.length} точек: ${names.join(", ")}`;
+    meta.title = names.join(", ");
+  } else {
+    const meta = $("#res-meta");
+    meta.textContent = `${fmtDate(rec.d)} · ${CEHS[rec.c]||""} · ${rec.p}`;
+    meta.title = "";
+  }
+  resultForemanStart = normName(rec.foreman || "");
   resForemanInput.value = rec.foreman || "";
   closeResForemanList();
   $("#res-lock").classList.add("on");
@@ -2423,6 +2705,7 @@ function openResults(id, editing){
 }
 function closeResults(){
   resultId = null;
+  resultIds = [];
   const lock = $("#res-lock");
   if(lock) lock.classList.remove("on");
   indState = {};
@@ -2430,24 +2713,40 @@ function closeResults(){
 $("#res-cancel").addEventListener("click", closeResults);
 $("#res-lock").addEventListener("click", e => { if(e.target.id==="res-lock") closeResults(); });
 $("#res-save").addEventListener("click", () => {
-  const rec = userEntries.find(r => r.id===resultId);
-  if(!rec) return;
+  const current = userEntries.find(r => r.id===resultId);
+  if(!current) return;
   const {s, kma} = buildProbe();
   if(!/[nexo]/.test(s)){ toast("Отметьте хотя бы один показатель"); return; }
-  const before = cloneProbe(rec);
-  const wasTaken = isTaken(rec);
+  const ids = resultIds.length ? resultIds : [resultId];
+  const targets = ids.map(id => userEntries.find(r => r.id===id)).filter(r => r && (isTaken(r) || r.id===resultId));
+  if(!targets.length){ toast("Отметьте хотя бы одну точку"); return; }
   const foremanName = normName(resForemanInput.value);
-  rec.foreman = foremanName ? ensureForeman(resultCeh || CEHS[rec.c] || "", foremanName) : "";
-  rec.s = s;
-  if(kma!=null) rec.k = kma; else delete rec.k;
-  delete rec.stage;
-  const changes = describeProbeChanges(before, rec);
-  if(!wasTaken && !changes.length){ Object.assign(rec, before); toast("Изменений нет"); return; }
-  rec.edited_by = ME.full_name || ME.login || rec.master || "";
-  rec.edited_at = new Date().toISOString();
-  rec.last_edit_changes = wasTaken ? ["Внесены результаты смыва"] : changes;
-  save(rec); updateCounts(); closeResults(); renderJournal();
-  toast("Результаты сохранены", {ok:true, ms:5000});
+  const shareForeman = targets.length === 1 || foremanName !== resultForemanStart;
+  const editedBy = ME.full_name || ME.login || current.master || "";
+  const editedAt = new Date().toISOString();
+  let saved = 0;
+  targets.forEach(rec => {
+    const before = cloneProbe(rec);
+    const wasTaken = isTaken(rec);
+    if(shareForeman) rec.foreman = foremanName ? ensureForeman(CEHS[rec.c] || "", foremanName) : "";
+    rec.s = s;
+    if(kma!=null) rec.k = kma; else delete rec.k;
+    delete rec.stage;
+    const changes = describeProbeChanges(before, rec);
+    if(!wasTaken && !changes.length){ Object.assign(rec, before); return; }
+    if(!wasTaken) rememberEdit(rec, editedBy, editedAt, changes);
+    else {
+      // Первый ввод результатов — не «правка» в истории, но штамп нужен, иначе sync может затереть.
+      rec.edited_at = editedAt;
+      rec.edited_by = editedBy;
+    }
+    save(rec);
+    saved++;
+    journalPick.delete(rec.id);
+  });
+  if(!saved){ toast("Изменений нет"); return; }
+  updateCounts(); closeResults(); renderJournal();
+  toast(saved > 1 ? `Результаты сохранены для ${saved} точек` : "Результаты сохранены", {ok:true, ms:5000});
 });
 function fmtDate(d){ return d ? d.split("-").reverse().join(".") : ""; }
 function fmtDateTime(ts){
@@ -2627,7 +2926,7 @@ function el(t,a){ const n=document.createElementNS(SVG,t); for(const k in a) n.s
 let statsCache = null;
 let statsToken = "";
 function cachedStats(){
-  const token = String(journalRev) + "|" + allProbes().length + "|" + pendingEntries.map(entryStamp).join("~");
+  const token = String(journalRev) + "|" + allProbes().length + "|" + statPeriod + "|" + statFrom + "|" + statTo + "|" + pendingEntries.map(entryStamp).join("~");
   if(statsCache && statsToken === token) return statsCache;
   statsToken = token;
   statsCache = computeStats();
@@ -2733,7 +3032,7 @@ function renderStats(){
   const conform = S.total ? (100*(1 - (countBadProbes(S.P)/S.total))).toFixed(1) : "—";
   const uniqPts = new Set(S.P.map(p=>p.c+"|"+p.p)).size;
   $("#kpis").innerHTML = [
-    kpiCard("accent","probe","ПРОБ ВСЕГО",    S.total.toLocaleString("ru"), userEntries.length?`+${userEntries.length} новых`:"за всё время"),
+    kpiCard("accent","probe","ПРОБ ВСЕГО",    S.total.toLocaleString("ru"), statPeriod==="all" ? (userEntries.length?`+${userEntries.length} новых`:"за всё время") : statScopeLabel()),
     kpiCard("","ceh",  "ЦЕХОВ",              cehN,                         `${uniqPts} точек отбора`),
     kpiCard("good","check","СООТВЕТСТВИЕ",   conform+"%",                  "проб без нарушений", parseFloat(conform)),
     kpiCard("crit","alert","НЕСООТВЕТСТВИЙ", S.fails,                      "бактерии обнаружены"),
@@ -2746,7 +3045,10 @@ function renderStats(){
   const acc=css("--accent");
   // by ceh — занимает половину ширины, нужен больший rowH
   const cehArr = Object.entries(S.byCeh).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:short(k),v,linkKey:k,tip:`<b>${k}</b><br><span class="v">${v}</span> проб`}));
-  hBar("ch-ceh", cehArr, {labelW:130, rowH:36, color:acc});
+  const cehNote = $("#ch-ceh-note");
+  if(cehNote) cehNote.textContent = statPeriod==="all" ? "Число проб за всё время наблюдений" : "Число проб " + statScopeLabel();
+  const insNote = $("#insights-note");
+  if(insNote) insNote.textContent = statPeriod==="all" ? "Автоматически выявленные паттерны по всей базе данных" : "Паттерны " + statScopeLabel();
   // elevated — теперь на всю ширину, даём высокий rowH
   const elArr = Object.entries(S.elevCeh).sort((a,b)=>b[1]-a[1]).map(([k,v])=>({label:short(k),v,color:v===Math.max(...Object.values(S.elevCeh))?css("--warning"):css("--c-blue"),tip:`<b>${k}</b><br><span class="v">${v}</span> повыш. проб`}));
   if(elArr.length) hBar("ch-elev", elArr, {labelW:140, rowH:44});
@@ -2790,9 +3092,19 @@ function renderLastMonthBlock(S){
   const latestSig = latest.fail + latest.elev;
   const prevSig   = prev ? (prev.fail + prev.elev) : null;
   const delta     = prevSig==null ? null : latestSig - prevSig;
-  const monLabel  = MON[parseInt(latestKey.slice(5,7))] + " " + latestKey.slice(0,4);
+  const dayReport = statPeriod==="range" && statFrom && statFrom===statTo;
+  const rangeReport = statPeriod==="range" && statFrom && statFrom!==statTo;
+  const monLabel  = dayReport
+    ? statFrom.split("-").reverse().join(".")
+    : rangeReport
+      ? (statFrom.split("-").reverse().join(".") + "–" + (statTo||statFrom).split("-").reverse().join("."))
+      : MON[parseInt(latestKey.slice(5,7))] + " " + latestKey.slice(0,4);
   let trendCls = "", trendIcon = "", trendText = "";
-  if(delta === null){
+  if(dayReport){
+    trendCls=""; trendIcon=""; trendText="за этот день";
+  } else if(rangeReport){
+    trendCls=""; trendIcon=""; trendText="за выбранные дни";
+  } else if(delta === null){
     trendCls=""; trendIcon=""; trendText="первый месяц";
   } else if(delta > 0){
     trendCls="lm-bad"; trendIcon="▲ "; trendText=`+${delta} сигнала к прошлому мес.`;
@@ -2813,7 +3125,7 @@ function renderLastMonthBlock(S){
   el.style.display="flex";
   const inner = $("#lm-inner");
   if(inner) inner.innerHTML =
-    item("Последний месяц", monLabel, `${latest.n} проб`) +
+    item(dayReport ? "Выбранный день" : rangeReport ? "Выбранный период" : "Последний месяц", monLabel, `${latest.n} проб`) +
     item("Несоответствий", latest.fail, "бактерии обнаружены", latest.fail>0?"lm-bad":"lm-ok") +
     item("Повышенных", latest.elev, "КМАФАнМ вырос", latest.elev>0?"lm-warn":"lm-ok") +
     item("Динамика сигналов", trendIcon+(latestSig), trendText, trendCls) +
@@ -3120,7 +3432,10 @@ function vchart(svgId, data, series, unit){
     // подпись значения сверху
     const topY = total ? base-(total/max)*barH : base;
     if(total){ const vt=el("text",{x:cx,y:topY-5,"text-anchor":"middle",class:"axislbl"}); vt.textContent=total; svg.appendChild(vt); }
-    else { const z=el("text",{x:cx,y:base-5,"text-anchor":"middle",class:"axislbl"}); z.textContent="—"; svg.appendChild(z); }
+    else {
+      svg.appendChild(el("rect",{x:cx-bw/2,y:base-8,width:bw,height:8,rx:3,fill:css("--surface-2")}));
+      const z=el("text",{x:cx,y:base-12,"text-anchor":"middle",class:"axislbl"}); z.textContent="0"; svg.appendChild(z);
+    }
     const xl=el("text",{x:cx,y:base+16,"text-anchor":"middle",class:"axislbl"}); xl.textContent=d.m; svg.appendChild(xl);
   });
 }
@@ -3136,13 +3451,31 @@ function renderSig(marr){
 
 /* ========= ИНТЕРАКТИВНОСТЬ СТАТИСТИКИ ========= */
 // Состояние фильтров
-let statPeriod = "all";   // "all" | "2025" | "2026" | "6m" | "3m"
+let statPeriod = "all";   // "all" | "2025" | "2026" | "6m" | "3m" | "range"
+let statFrom = "";
+let statTo = "";
 let statMode = "volume";  // volume | fail | elev | conform
+
+function statScopeLabel(){
+  if(statPeriod === "range" && statFrom){
+    const a = statFrom.split("-").reverse().join(".");
+    const b = (statTo || statFrom).split("-").reverse().join(".");
+    return a === b ? "за " + a : "с " + a + " по " + b;
+  }
+  return {all:"за всё время","2025":"за 2025 год","2026":"за 2026 год","6m":"за 6 месяцев","3m":"за 3 месяца"}[statPeriod] || "за выбранный период";
+}
 
 // Фильтрация проб по периоду
 function filterProbes(allP){
   const now = new Date();
   return allP.filter(p=>{
+    const day = String(p.d || "").slice(0, 10);
+    if(statPeriod === "range"){
+      if(!day) return false;
+      if(statFrom && day < statFrom) return false;
+      if(statTo && day > statTo) return false;
+      return true;
+    }
     if(statPeriod === "all") return true;
     const d = new Date(p.d);
     if(statPeriod === "2025" && d.getFullYear() !== 2025) return false;
@@ -3162,45 +3495,11 @@ function filterProbes(allP){
 // Переопределяем computeStats чтобы учитывать фильтры
 const _origComputeStats = computeStats;
 computeStats = function(){
-  const S = _origComputeStats();
-  if(statPeriod === "all") return S;
-  // перефильтруем P
-  const P = filterProbes(S.P);
-  // пересчитаем нужные поля
-  const byCeh={}, month={}, monthCeh={}, elevCeh={}, fill={}, failList=[], failByInd={}, failByCeh={}, hotPoints={}, matrix={}, reg={};
-  IND.forEach(n=>fill[n]=0);
-  let fails=0, overs=0, elevN=0, maxKma={koe:0};
-  P.forEach(p=>{
-    byCeh[p.c]=(byCeh[p.c]||0)+1;
-    const mk=p.d?p.d.slice(0,7):"?";
-    if(!month[mk]) month[mk]={n:0,fail:0,elev:0};
-    month[mk].n++;
-    if(!monthCeh[mk]) monthCeh[mk]={};
-    if(!monthCeh[mk][p.c]) monthCeh[mk][p.c]={n:0,fail:0,elev:0};
-    monthCeh[mk][p.c].n++;
-    IND.forEach(n=>{ if(p[n]!==undefined&&p[n]!==null&&p[n]!=="") fill[n]++; });
-    const bad=p.inds&&p.inds.some(i=>i.st==="fail");
-    const elev=!bad&&p.inds&&p.inds.some(i=>i.st==="elev");
-    if(bad){ fails++; month[mk].fail++; monthCeh[mk][p.c].fail++; failByCeh[p.c]=(failByCeh[p.c]||0)+1;
-      p.inds&&p.inds.filter(i=>i.st==="fail").forEach(i=>{ failByInd[i.n]=(failByInd[i.n]||0)+1; failList.push({d:p.d,c:p.c,pt:p.p,ind:i.n,koe:i.koe,st:i.st}); }); }
-    if(elev){ elevN++; month[mk].elev++; monthCeh[mk][p.c].elev++; elevCeh[p.c]=(elevCeh[p.c]||0)+1; }
-    const kma=p.inds&&p.inds.find(i=>i.n==="КМАФАнМ");
-    if(kma&&kma.koe>1000){ overs++; if(kma.koe>(maxKma.koe||0)) maxKma={koe:kma.koe,d:p.d,c:p.c,point:p.p}; }
-    const pt=p.c+"|"+p.p; hotPoints[pt]=(hotPoints[pt]||{n:0,fail:0,elev:0,c:p.c,p:p.p});
-    hotPoints[pt].n++; if(bad)hotPoints[pt].fail++; if(elev)hotPoints[pt].elev++;
-    for(let i=0;i<p.s.length;i++){
-      const ch = p.s[i], ind = IND[i];
-      const isSig = (ind==="КМАФАнМ") ? (ch==="e"||ch==="o") : (ch==="x");
-      if(isSig){ (matrix[p.c]=matrix[p.c]||{})[ind]=(matrix[p.c][ind]||0)+1; }
-    }
-    const rr = reg[p.c]||(reg[p.c]={n:0, dates:new Set(), last:""});
-    rr.n++; if(p.d){ rr.dates.add(p.d); if(p.d>rr.last) rr.last=p.d; }
-  });
-  const topPoints=Object.values(hotPoints).map(v=>({...v,sig:v.fail+v.elev})).sort((a,b)=>b.sig-a.sig);
-  const recurring=topPoints.filter(v=>v.sig>=2);
-  const peak=Object.entries(month).reduce((a,[k,v])=>v.fail+v.elev>a.sig?{m:k,sig:v.fail+v.elev}:a,{m:null,sig:0});
-  const regList = Object.entries(reg).map(([ceh,r])=>({ceh, n:r.n, sessions:r.dates.size, last:r.last}));
-  return {...S, P, byCeh, month, monthCeh, elevCeh, fill, fails, overs, elevN, total:P.length, failList, failByInd, failByCeh, hotPoints, maxKma, peak, topPoints, recurring, matrix, regList};
+  if(statPeriod === "all") return _origComputeStats();
+  const prev = allProbes;
+  allProbes = function(){ return filterProbes(prev()); };
+  try { return _origComputeStats(); }
+  finally { allProbes = prev; }
 };
 
 function ensureDrillOverlay(){
@@ -3311,6 +3610,16 @@ function showHeatmapDrill(cehName, indName, S){
   `;
 }
 
+function monthConform(m){ return m && m.n ? (100 * (m.n - m.fail) / m.n) : null; }
+function cmpDelta(a, b, invert){
+  if(a == null || b == null) return {cls:"flat", text:"—"};
+  const d = b - a;
+  if(Math.abs(d) < 0.05) return {cls:"flat", text:"= 0"};
+  const better = invert ? d > 0 : d < 0;
+  const sign = d > 0 ? "+" : "";
+  const val = Number.isInteger(d) ? d : d.toFixed(1);
+  return {cls: better ? "down" : "up", text: sign + val};
+}
 function renderCompareControls(S){
   const keys = Object.keys(S.month).sort();
   const selA = $("#cmp-a"), selB = $("#cmp-b"), summary = $("#cmp-summary");
@@ -3320,37 +3629,221 @@ function renderCompareControls(S){
     selA.onchange = selB.onchange = ()=>renderCompareControls(cachedStats());
     selA.dataset.bound = selB.dataset.bound = "1";
   }
+  const prevA = selA.value, prevB = selB.value;
   if(selA.innerHTML !== opts){
     selA.innerHTML = opts;
     selB.innerHTML = opts;
   }
-  if(!selA.value && keys.length) selA.value = keys[Math.max(0, keys.length-2)] || keys[0];
-  if(!selB.value && keys.length) selB.value = keys[keys.length-1] || keys[0];
-  if(keys.length===1){ selA.value = selB.value = keys[0]; }
-  const a = S.month[selA.value], b = S.month[selB.value];
+  if(keys.length < 2){
+    summary.innerHTML = `<p class="compare-empty">Для сравнения нужны данные хотя бы за два месяца.</p>`;
+    return;
+  }
+  if(!selA.dataset.inited){
+    selA.value = keys[Math.max(0, keys.length-2)];
+    selB.value = keys[keys.length-1];
+    selA.dataset.inited = "1";
+  } else {
+    if(prevA && keys.includes(prevA)) selA.value = prevA;
+    else selA.value = keys[Math.max(0, keys.length-2)];
+    if(prevB && keys.includes(prevB)) selB.value = prevB;
+    else selB.value = keys[keys.length-1];
+  }
+  if(selA.value === selB.value){
+    summary.innerHTML = `<p class="compare-empty">Выберите два разных месяца.</p>`;
+    return;
+  }
+  // Всегда слева раньше, справа позже — иначе «разница» и подсказка врут.
+  if(selA.value > selB.value){
+    const tmp = selA.value;
+    selA.value = selB.value;
+    selB.value = tmp;
+  }
+  const keyA = selA.value, keyB = selB.value;
+  const a = S.month[keyA], b = S.month[keyB];
   if(!a || !b){ summary.innerHTML=""; return; }
+  const confA = monthConform(a), confB = monthConform(b);
+  const dN = cmpDelta(a.n, b.n, true);
+  const dFail = cmpDelta(a.fail, b.fail, false);
+  const dElev = cmpDelta(a.elev, b.elev, false);
+  const dConf = cmpDelta(confA, confB, true);
   const sigA = a.fail + a.elev, sigB = b.fail + b.elev;
-  const delta = sigB - sigA;
-  const cls = delta>0 ? "bad" : delta<0 ? "good" : "warn";
-  const txt = delta>0 ? `+${delta} сигналов` : delta<0 ? `${delta} сигналов` : "без изменений";
-  summary.innerHTML = `<span class="compare-badge ${cls}">${monthShortLabel(selA.value)} → ${monthShortLabel(selB.value)}: ${txt}</span>`;
+  const sigDelta = sigB - sigA;
+  let note;
+  if(sigDelta < 0) note = `В ${monthShortLabel(keyB)} сигналов меньше на ${-sigDelta}, чем в ${monthShortLabel(keyA)} — стало спокойнее.`;
+  else if(sigDelta > 0) note = `В ${monthShortLabel(keyB)} сигналов больше на ${sigDelta}, чем в ${monthShortLabel(keyA)} — стоит разобрать.`;
+  else note = `По числу сигналов месяцы одинаковые. Смотрите пробы и соответствие в таблице.`;
+  const fmtConf = v => v == null ? "—" : v.toFixed(1) + "%";
+  summary.innerHTML = `
+    <div class="compare-grid">
+      <div class="head">Показатель</div>
+      <div class="head">${esc(monthShortLabel(keyA))}</div>
+      <div class="head">${esc(monthShortLabel(keyB))}</div>
+      <div class="head">Разница</div>
+      <div class="lab">Пробы</div><div class="num">${a.n}</div><div class="num">${b.n}</div><div class="num ${dN.cls}">${dN.text}</div>
+      <div class="lab">Несоответствия</div><div class="num">${a.fail}</div><div class="num">${b.fail}</div><div class="num ${dFail.cls}">${dFail.text}</div>
+      <div class="lab">Повышенные</div><div class="num">${a.elev}</div><div class="num">${b.elev}</div><div class="num ${dElev.cls}">${dElev.text}</div>
+      <div class="lab">Соответствие</div><div class="num">${fmtConf(confA)}</div><div class="num">${fmtConf(confB)}</div><div class="num ${dConf.cls}">${dConf.text}${dConf.text==="—"||dConf.text==="= 0"?"":" п.п."}</div>
+    </div>
+    <p class="compare-note">${esc(note)}</p>`;
 }
 
+function exploreDays(){
+  if(statPeriod !== "range" || !statFrom || !statTo) return null;
+  const days = [];
+  let t = new Date(statFrom + "T12:00:00").getTime();
+  const end = new Date(statTo + "T12:00:00").getTime();
+  while(t <= end){
+    const d = new Date(t);
+    const p = n => String(n).padStart(2,"0");
+    days.push(`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`);
+    if(days.length > 45) return null;
+    t += 86400000;
+  }
+  return days;
+}
+function dayChartData(S, days){
+  return days.map(day => {
+    const rows = S.P.filter(p => String(p.d||"").slice(0,10) === day);
+    let fail = 0, elev = 0;
+    rows.forEach(pr => {
+      let hasFail = false, hasElev = false;
+      const s = pr.s || "";
+      for(let i=0;i<s.length;i++){
+        const ch = s[i];
+        if(ch==="x" || ch==="o") hasFail = true;
+        if(ch==="e") hasElev = true;
+      }
+      if(hasFail) fail++;
+      else if(hasElev) elev++;
+    });
+    return {m: day.slice(8,10)+"."+day.slice(5,7), key: day, n: rows.length, fail, elev};
+  });
+}
+function probeRowStatus(pr){
+  if(isTaken(pr)) return {cls:"taken", text:"Смыв взят", detail:"результаты ещё не внесены", rank:3};
+  const fl = probeFlags(pr);
+  if(fl.bad.length || fl.over.length){
+    const parts = [];
+    fl.bad.forEach(n => parts.push(n + ": обнаружено"));
+    fl.over.forEach(() => parts.push("КМАФАнМ: " + ((pr.k||0).toLocaleString("ru")) + " КОЕ · превышение"));
+    return {cls:"bad", text:"несоответствие", detail: parts.join("; "), rank:0};
+  }
+  if(fl.elev.length){
+    return {cls:"warn", text:"повышенный", detail:"КМАФАнМ: " + ((pr.k||0).toLocaleString("ru")) + " КОЕ", rank:1};
+  }
+  return {cls:"norm", text:"норма", detail:"", rank:2};
+}
+function showDayDetail(day, S){
+  ensureDrillOverlay();
+  const done = (S.P || []).filter(p => String(p.d||"").slice(0,10) === day);
+  const taken = allProbes().filter(p => String(p.d||"").slice(0,10) === day && isTaken(p));
+  const rows = done.concat(taken).sort((a,b) => {
+    const ra = probeRowStatus(a).rank, rb = probeRowStatus(b).rank;
+    if(ra !== rb) return ra - rb;
+    return String(CEHS[a.c]||"").localeCompare(String(CEHS[b.c]||""),"ru") || String(a.p||"").localeCompare(String(b.p||""),"ru");
+  });
+  const label = day.split("-").reverse().join(".");
+  let fail = 0, elev = 0, wait = taken.length;
+  done.forEach(pr => {
+    const st = probeRowStatus(pr);
+    if(st.cls==="bad") fail++;
+    else if(st.cls==="warn") elev++;
+  });
+  const byCeh = {};
+  rows.forEach(pr => {
+    const name = CEHS[pr.c] || "—";
+    const slot = byCeh[name] || (byCeh[name] = {n:0, fail:0, elev:0, wait:0});
+    slot.n++;
+    const st = probeRowStatus(pr);
+    if(st.cls==="bad") slot.fail++;
+    else if(st.cls==="warn") slot.elev++;
+    else if(st.cls==="taken") slot.wait++;
+  });
+  const cehList = Object.entries(byCeh).sort((a,b) => b[1].fail - a[1].fail || b[1].elev - a[1].elev || b[1].n - a[1].n);
+  // Как в monthConform: повышенные входят в соответствие, режут % только несоответствия.
+  const conform = done.length ? (100 * (done.length - fail) / done.length).toFixed(1) : "—";
+  const summary = [
+    `${label}: отобрано ${rows.length} ${plural(rows.length,"смыв","смыва","смывов")} в ${cehList.length} ${plural(cehList.length,"цехе","цехах","цехах")}.`,
+    fail ? `Несоответствий: ${fail}.` : "Несоответствий нет.",
+    elev ? `Повышенных: ${elev}.` : "",
+    wait ? `Ещё без результатов: ${wait}.` : "",
+    done.length ? `Соответствие по готовым пробам: ${conform}%.` : ""
+  ].filter(Boolean).join(" ");
+  const overlay = $("#drill-overlay");
+  overlay.style.display = "flex";
+  document.body.classList.add("modal-open");
+  $("#drill-panel").innerHTML = `
+    <button class="drill-close" onclick="closeDrill()">✕ Закрыть</button>
+    <h2>Отчёт за ${label}</h2>
+    <p class="drill-sub">Что сделали в этот день — для совещания</p>
+    <p class="day-sum" id="day-sum-text">${esc(summary)}</p>
+    <button type="button" class="sf-btn day-copy" id="day-copy">Скопировать сводку</button>
+    <div class="drill-kpis">
+      <div class="drill-kpi"><div class="dk-label">Смывов</div><div class="dk-val">${rows.length}</div></div>
+      <div class="drill-kpi"><div class="dk-label">Цехов</div><div class="dk-val">${cehList.length}</div></div>
+      <div class="drill-kpi"><div class="dk-label">Несоответствий</div><div class="dk-val" style="color:${fail?"var(--critical)":"var(--ink)"}">${fail}</div></div>
+      <div class="drill-kpi"><div class="dk-label">Повышенных</div><div class="dk-val" style="color:${elev?"var(--warning)":"var(--ink)"}">${elev}</div></div>
+      <div class="drill-kpi"><div class="dk-label">Соответствие</div><div class="dk-val" style="color:var(--good)">${conform}${conform==="—"?"":"%"}</div></div>
+    </div>
+    ${cehList.length ? `<div class="day-block">По цехам</div><div class="day-ceh">${cehList.map(([name,v]) => {
+      const bits = [`${v.n} ${plural(v.n,"проба","пробы","проб")}`];
+      if(v.fail) bits.push(`несоотв. ${v.fail}`);
+      if(v.elev) bits.push(`повыш. ${v.elev}`);
+      if(v.wait) bits.push(`без рез. ${v.wait}`);
+      if(!v.fail && !v.elev && !v.wait) bits.push("всё в норме");
+      return `<div class="day-ceh-row"><span class="name">${esc(name)}</span><span class="meta">${esc(bits.join(" · "))}</span></div>`;
+    }).join("")}</div>` : ""}
+    ${rows.length ? `<div class="day-block">Все смывы дня</div>
+    <table class="day-table" style="width:100%;font-size:13.5px;border-collapse:collapse">
+      <thead><tr style="color:var(--muted);font-size:11px;text-align:left;border-bottom:2px solid var(--hairline)">
+        <th style="padding:6px 10px">Цех</th>
+        <th style="padding:6px 10px">Точка</th>
+        <th style="padding:6px 10px">Мастер</th>
+        <th style="padding:6px 10px">Результат</th>
+        <th style="padding:6px 10px">Ответственный</th>
+      </tr></thead>
+      <tbody>${rows.map(pr => {
+        const st = probeRowStatus(pr);
+        const person = shortPerson(pr.master || "—");
+        const rowCls = st.cls==="bad" ? "issue" : st.cls==="warn" ? "raise" : "";
+        return `<tr class="${rowCls}" style="border-bottom:1px solid var(--hairline)">
+          <td style="padding:8px 10px">${esc(short(CEHS[pr.c]||""))}</td>
+          <td style="padding:8px 10px;font-weight:600">${esc(pr.p||"—")}</td>
+          <td style="padding:8px 10px">${esc(pr.foreman||"—")}</td>
+          <td class="res-${st.cls}" style="padding:8px 10px">${esc(st.text)}${st.detail ? `<span class="detail">${esc(st.detail)}</span>` : ""}</td>
+          <td style="padding:8px 10px" title="${esc(person.full)}">${esc(person.short)}</td>
+        </tr>`;
+      }).join("")}</tbody>
+    </table>` : "<p style='color:var(--muted)'>За этот день смывов нет.</p>"}
+  `;
+  const copyBtn = $("#day-copy");
+  if(copyBtn) copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(summary);
+      toast("Сводка скопирована", {ok:true});
+    } catch(e){ toast("Не удалось скопировать"); }
+  });
+}
 function renderExploreChart(S){
+  const days = exploreDays();
+  const daily = days ? dayChartData(S, days) : null;
   const keys = Object.keys(S.month).sort();
   const title = $("#ch-explore-title"), note = $("#ch-explore-note");
-  if(!keys.length){ clearSvg("ch-explore","Нет данных"); return; }
+  if(!daily && !keys.length){ clearSvg("ch-explore","Нет данных"); return; }
   const modeMap = {
-    volume: {title:"Интерактивный график: пробы", note:"Клик по месяцу открывает подробный разбор", series:[{key:"n", color:css("--accent"), label:"Проб"}], unit:"проб"},
-    fail: {title:"Интерактивный график: несоответствия", note:"Красные столбцы — случаи с обнаружением", series:[{key:"fail", color:css("--critical"), label:"Несоответствия"}], unit:"случаев"},
-    elev: {title:"Интерактивный график: повышенные", note:"Оранжевые столбцы — рост КМАФАнМ в пределах нормы", series:[{key:"elev", color:css("--warning"), label:"Повышенные"}], unit:"случаев"},
+    volume: {title:"Интерактивный график: пробы", note: daily ? "Нажмите на столбец — откроется список смывов за день" : "Клик по месяцу открывает подробный разбор", series:[{key:"n", color:css("--accent"), label:"Проб"}], unit:"проб"},
+    fail: {title:"Интерактивный график: несоответствия", note: daily ? "Нажмите на столбец — откроется список смывов за день" : "Красные столбцы — случаи с обнаружением. Нажмите, чтобы открыть разбор", series:[{key:"fail", color:css("--critical"), label:"Несоответствия"}], unit:"случаев"},
+    elev: {title:"Интерактивный график: повышенные", note: daily ? "Нажмите на столбец — откроется список смывов за день" : "Оранжевые столбцы — рост КМАФАнМ в пределах нормы", series:[{key:"elev", color:css("--warning"), label:"Повышенные"}], unit:"случаев"},
     conform: {title:"Интерактивный график: соответствие", note:"Линия показывает долю проб без нарушений", series:null, unit:"%"},
   };
   const cfg = modeMap[statMode] || modeMap.volume;
   if(title) title.textContent = cfg.title;
   if(note) note.textContent = cfg.note;
+  if(statPeriod==="range" && !daily && note){
+    note.textContent = "Диапазон больше 45 дней — показаны месяцы. Сузьте даты, чтобы кликать по дням.";
+  }
   if(statMode==="conform") renderConform(S, "ch-explore");
-  else vchart("ch-explore", monthArr(S.month), cfg.series, cfg.unit);
+  else vchart("ch-explore", daily || monthArr(S.month), cfg.series, cfg.unit);
 }
 
 function applyLinkedHover(){
@@ -3498,14 +3991,44 @@ function closeDrill(){
 }
 
 // Инициализация фильтров периода
+function applyStatRange(){
+  const fromEl = $("#stat-from"), toEl = $("#stat-to");
+  if(!fromEl || !toEl) return;
+  let from = fromEl.value, to = toEl.value;
+  if(from && to && from > to){ const swap = from; from = to; to = swap; fromEl.value = from; toEl.value = to; }
+  if(!from && !to){
+    statFrom = ""; statTo = "";
+    fromEl.classList.remove("on"); toEl.classList.remove("on");
+    if(statPeriod === "range"){
+      statPeriod = "all";
+      document.querySelectorAll("[data-period]").forEach(b => b.classList.toggle("on", b.dataset.period==="all"));
+    }
+    renderStats();
+    return;
+  }
+  statFrom = from || to;
+  statTo = to || from;
+  statPeriod = "range";
+  fromEl.classList.add("on"); toEl.classList.add("on");
+  document.querySelectorAll("[data-period]").forEach(b => b.classList.remove("on"));
+  renderStats();
+}
 function initStatFilters(){
   document.querySelectorAll("[data-period]").forEach(btn=>{
     btn.addEventListener("click",()=>{
       document.querySelectorAll("[data-period]").forEach(b=>b.classList.remove("on"));
       btn.classList.add("on");
       statPeriod = btn.dataset.period;
+      statFrom = ""; statTo = "";
+      const fromEl = $("#stat-from"), toEl = $("#stat-to");
+      if(fromEl){ fromEl.value = ""; fromEl.classList.remove("on"); }
+      if(toEl){ toEl.value = ""; toEl.classList.remove("on"); }
       renderStats();
     });
+  });
+  ["stat-from","stat-to"].forEach(id => {
+    const el = $("#"+id);
+    if(el) el.addEventListener("change", applyStatRange);
   });
   document.querySelectorAll("[data-stat-mode]").forEach(btn=>{
     btn.addEventListener("click",()=>{
@@ -3528,11 +4051,16 @@ vchart = function(svgId, data, series, unit){
   const n=data.length, slot=(W-padL-padR)/n;
   data.forEach((d,i)=>{
     const cx=padL+slot*i+slot/2;
-    const hit=el("rect",{x:cx-slot/2,y:0,width:slot,height:H,fill:"transparent",cursor:"pointer"});
+    const hit=el("rect",{x:cx-slot/2,y:0,width:slot,height:H,fill:"transparent"});
+    hit.style.cursor = "pointer";
+    const tip = `<b>${d.m}</b><br>проб: <span class="v">${d.n||0}</span><br>несоответствий: <span class="v">${d.fail||0}</span><br>повышенных: <span class="v">${d.elev||0}</span>`;
+    hit.addEventListener("mousemove", e => showTT(tip, e));
+    hit.addEventListener("mouseleave", hideTT);
     hit.addEventListener("click",()=>{
+      hideTT();
       const S = cachedStats();
+      if(d.key){ showDayDetail(d.key, S); return; }
       const keys=Object.keys(S.month).sort();
-      // найдём ключ месяца по метке
       const mk = keys.find(k=>MON[parseInt(k.slice(5,7))]+" "+k.slice(2,4)===d.m);
       if(mk) showMonthDetail(mk, S);
     });

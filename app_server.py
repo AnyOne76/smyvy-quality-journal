@@ -387,22 +387,75 @@ def _indicators_filled(entry):
     return any(ch != "." for ch in str(entry.get("s") or ""))
 
 
+def _history_items(entry):
+    if not isinstance(entry, dict):
+        return []
+    raw = entry.get("edit_history")
+    items = []
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            changes = item.get("changes") if isinstance(item.get("changes"), list) else []
+            if changes == ["Внесены результаты смыва"]:
+                continue
+            items.append({
+                "at": str(item.get("at") or ""),
+                "by": str(item.get("by") or ""),
+                "changes": [str(x) for x in changes],
+            })
+    if items:
+        return items
+    changes = entry.get("last_edit_changes")
+    if not entry.get("edited_by") or changes == ["Внесены результаты смыва"]:
+        return []
+    if not isinstance(changes, list):
+        changes = []
+    return [{
+        "at": str(entry.get("edited_at") or ""),
+        "by": str(entry.get("edited_by") or ""),
+        "changes": [str(x) for x in changes],
+    }]
+
+
+def _merge_histories(prev, incoming):
+    seen = set()
+    out = []
+    for item in _history_items(prev) + _history_items(incoming):
+        key = item["at"] + "\n" + item["by"] + "\n" + json.dumps(item["changes"], ensure_ascii=False)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(item)
+    out.sort(key=lambda item: item["at"])
+    return out
+
+
 def _merge_entry(prev, incoming):
+    history = _merge_histories(prev, incoming)
     prev_at = str(prev.get("edited_at") or "")
     incoming_at = str(incoming.get("edited_at") or "")
     if prev_at and (not incoming_at or incoming_at < prev_at):
-        return dict(prev)
-    out = dict(prev)
-    out.update(incoming)
-    if _indicators_filled(prev) and not _indicators_filled(incoming):
-        out["s"] = prev.get("s")
-        if "k" in prev:
-            out["k"] = prev.get("k")
-        if prev.get("stage"):
-            out["stage"] = prev.get("stage")
-    for key in ("foreman", "master", "p", "d"):
-        if not str(incoming.get(key) or "").strip() and str(prev.get(key) or "").strip():
-            out[key] = prev.get(key)
+        out = dict(prev)
+    else:
+        out = dict(prev)
+        out.update(incoming)
+        if _indicators_filled(prev) and not _indicators_filled(incoming):
+            out["s"] = prev.get("s")
+            if "k" in prev:
+                out["k"] = prev.get("k")
+            if prev.get("stage"):
+                out["stage"] = prev.get("stage")
+        for key in ("foreman", "master", "p", "d"):
+            if not str(incoming.get(key) or "").strip() and str(prev.get(key) or "").strip():
+                out[key] = prev.get(key)
+    if history:
+        out["edit_history"] = history
+        last = history[-1]
+        if str(last.get("at") or "") >= str(out.get("edited_at") or ""):
+            out["edited_at"] = last.get("at") or ""
+            out["edited_by"] = last.get("by") or ""
+            out["last_edit_changes"] = last.get("changes") or []
     return out
 
 
