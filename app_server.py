@@ -397,7 +397,7 @@ def _history_items(entry):
             if not isinstance(item, dict):
                 continue
             changes = item.get("changes") if isinstance(item.get("changes"), list) else []
-            if changes == ["Внесены результаты смыва"]:
+            if changes == ["Внесены результаты смыва"] or not changes:
                 continue
             items.append({
                 "at": str(item.get("at") or ""),
@@ -409,8 +409,8 @@ def _history_items(entry):
     changes = entry.get("last_edit_changes")
     if not entry.get("edited_by") or changes == ["Внесены результаты смыва"]:
         return []
-    if not isinstance(changes, list):
-        changes = []
+    if not isinstance(changes, list) or not changes:
+        return []
     return [{
         "at": str(entry.get("edited_at") or ""),
         "by": str(entry.get("edited_by") or ""),

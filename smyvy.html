@@ -261,6 +261,8 @@
   .det-edit .det-who{font-size:12.5px;font-weight:650;}
   .det-edit ul{margin-top:4px;}
   .resp-note{display:block;margin-top:4px;font-size:11.5px;color:var(--warning);font-weight:600;}
+  .resp-note.results{color:var(--ink-2);font-weight:600;}
+  .det-entered{margin-top:14px;font-size:12.5px;color:var(--ink-2);}
   .edit-note{display:flex;align-items:center;gap:9px;margin-top:16px;padding:11px 14px;border-radius:11px;background:var(--accent-soft);color:var(--accent);font-size:13px;font-weight:550;}
   .edit-note svg{width:16px;height:16px;flex:none;}
   .edit-note .link{color:var(--accent);margin-left:auto;}
@@ -2355,6 +2357,12 @@ function isNew(pr){
 function isResultNote(list){
   return Array.isArray(list) && list.length === 1 && list[0] === "Внесены результаты смыва";
 }
+function resultsMeta(pr){
+  if(!pr || isTaken(pr) || isCorrection(pr)) return null;
+  if(isResultNote(pr.last_edit_changes) || pr.edited_at)
+    return {by: pr.edited_by || "", at: pr.edited_at || ""};
+  return null;
+}
 function editHistory(pr){
   if(!pr) return [];
   const raw = Array.isArray(pr.edit_history) ? pr.edit_history.filter(x => x && typeof x === "object") : [];
@@ -2363,13 +2371,16 @@ function editHistory(pr){
       at: x.at || "",
       by: x.by || "",
       changes: Array.isArray(x.changes) ? x.changes.slice() : []
-    }));
+    })).filter(x => x.changes.length);
   }
+  // Первый ввод результатов — не правка.
   if(!pr.edited_by || isResultNote(pr.last_edit_changes)) return [];
+  const changes = Array.isArray(pr.last_edit_changes) ? pr.last_edit_changes.slice() : [];
+  if(!changes.length) return [];
   return [{
     at: pr.edited_at || "",
     by: pr.edited_by || "",
-    changes: Array.isArray(pr.last_edit_changes) ? pr.last_edit_changes.slice() : []
+    changes
   }];
 }
 function isCorrection(pr){ return editHistory(pr).length > 0; }
@@ -2412,17 +2423,17 @@ function indicatorDetail(pr, i){
 function journalDetailHtml(pr){
   if(isTaken(pr)) return `<div class="det-wrap"><div class="det-wait">Смыв взят. Ожидается занесение результатов.</div></div>`;
   const items = IND.map((_, i) => indicatorDetail(pr, i));
+  const entered = resultsMeta(pr);
+  const enteredHtml = entered ? `<div class="det-entered">Результаты внесены${entered.by ? ": " + esc(entered.by) : ""}${fmtDateTime(entered.at) ? " · " + esc(fmtDateTime(entered.at)) : ""}.</div>` : "";
   const hist = editHistory(pr).slice().reverse();
   const changes = hist.length ? `<div class="det-changes"><div class="det-title">История правок</div>${hist.map(item => {
     const who = `${esc(item.by || "—")}${fmtDateTime(item.at) ? " · " + esc(fmtDateTime(item.at)) : ""}`;
-    const body = item.changes.length
-      ? `<ul>${item.changes.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`
-      : `<div class="det-st">Подробности этой правки не сохранились.</div>`;
+    const body = `<ul>${item.changes.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
     return `<div class="det-edit"><div class="det-who">${who}</div>${body}</div>`;
   }).join("")}</div>` : "";
   return `<div class="det-wrap"><div class="det-title">Показатели пробы</div><div class="det-grid">${
     items.map(it => `<div class="det-item ${it.state}"><div class="det-name">${esc(it.ind)}</div><div class="det-val">${esc(it.val)}</div><div class="det-st">${esc(it.status)}</div></div>`).join("")
-  }</div>${changes}</div>`;
+  }</div>${enteredHtml}${changes}</div>`;
 }
 function journalCols(){ return can("edit") ? 8 : 7; }
 function syncJournalPick(){
@@ -2467,7 +2478,11 @@ function journalRowHtml({pr, idx}){
   const fresh = isNew(pr) ? `<span class="chip new mini">новая</span>` : "";
   const editStamp = fmtDateTime(pr.edited_at);
   const person = shortPerson(pr.master || "—");
-  const resp = `<span title="${esc(person.full)}">${esc(person.short)}</span>${isCorrection(pr) ? `<span class="resp-note" title="Последняя правка: ${esc(pr.edited_by)}${editStamp ? " · "+esc(editStamp) : ""}">правка${editStamp ? ` · ${esc(editStamp)}` : ""}</span>` : ""}`;
+  const entered = resultsMeta(pr);
+  const respNote = isCorrection(pr)
+    ? `<span class="resp-note" title="Последняя правка: ${esc(pr.edited_by)}${editStamp ? " · "+esc(editStamp) : ""}">правка${editStamp ? ` · ${esc(editStamp)}` : ""}</span>`
+    : (entered ? `<span class="resp-note results" title="Результаты внесены${entered.by ? ": "+entered.by : ""}${editStamp ? " · "+editStamp : ""}">результаты${editStamp ? ` · ${esc(editStamp)}` : ""}</span>` : "");
+  const resp = `<span title="${esc(person.full)}">${esc(person.short)}</span>${respNote}`;
   const key = String(idx);
   const open = jExpanded.has(key);
   const resBtn = (isTaken(pr) && can("edit")) ? `<button type="button" class="resbtn" data-res="${esc(pr.id)}">Результаты</button>` : "";
@@ -2736,9 +2751,10 @@ $("#res-save").addEventListener("click", () => {
     if(!wasTaken && !changes.length){ Object.assign(rec, before); return; }
     if(!wasTaken) rememberEdit(rec, editedBy, editedAt, changes);
     else {
-      // Первый ввод результатов — не «правка» в истории, но штамп нужен, иначе sync может затереть.
+      // Первый ввод результатов — занесение, не правка. Штамп для sync и понятной подписи в журнале.
       rec.edited_at = editedAt;
       rec.edited_by = editedBy;
+      rec.last_edit_changes = ["Внесены результаты смыва"];
     }
     save(rec);
     saved++;
