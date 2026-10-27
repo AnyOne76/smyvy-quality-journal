@@ -568,7 +568,7 @@
 <header>
   <div class="bar">
     <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="1.7"/><circle cx="12" cy="12" r="3.2" fill="#fff"/><circle cx="8" cy="8" r="1.1" fill="#fff"/><circle cx="16.5" cy="9.5" r="1.1" fill="#fff"/><circle cx="15" cy="16" r="1.1" fill="#fff"/></svg></div>
-    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.6.1</span></div>
+    <div class="brand"><b>Смывы · рабочее место</b><span>Служба качества · версия 1.6.2</span></div>
     <div class="tabs" role="tablist">
       <a class="tab on" data-tab="input" href="/input"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="t">Ввод</span></a>
       <a class="tab" data-tab="journal" href="/journal"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h16v16H4zM4 9h16M9 4v16"/></svg><span class="t">Журнал</span><span class="b" id="tab-count">0</span></a>
@@ -837,7 +837,7 @@
       <div class="rh"><h4>Служба качества</h4><p>Чтение + ввод + редактирование и удаление записей.</p></div>
       <div class="rh"><h4>Администратор</h4><p>Все права + пользователи, роли, блокировка учётных записей, список удалённых смывов и удаление цехов, точек и мастеров.</p></div>
     </div>
-    <div class="tbl-wrap"><table><thead><tr><th>Логин</th><th>Роль</th><th>Статус</th><th>Регистрация</th><th></th></tr></thead><tbody id="admin-users"></tbody></table></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Логин</th><th>Роль</th><th>Статус</th><th>Регистрация</th><th>Последний визит</th><th></th></tr></thead><tbody id="admin-users"></tbody></table></div>
     <p class="rowcap" id="admin-cap"></p>
     <h2 style="margin:28px 0 8px">Цеха, точки и мастера</h2>
     <p class="lede" style="font-size:14px;color:var(--ink-2);margin:0 0 14px;max-width:70ch">Удаление убирает название из списков при занесении нового смыва. Записи, которые уже лежат в журнале, остаются. Если убрали не то, откройте список и найдите название.</p>
@@ -1398,9 +1398,9 @@ async function renderAdmin(){
   renderAdminCatalog();
   renderDeleted();
   const body=$("#admin-users");
-  body.innerHTML=`<tr><td colspan="5" class="empty">Загрузка…</td></tr>`;
-  let res; try{ res=await apiJSON("/api/users"); }catch(_){ body.innerHTML=`<tr><td colspan="5" class="empty">Сервер недоступен</td></tr>`; return; }
-  if(!res.ok){ body.innerHTML=`<tr><td colspan="5" class="empty">${esc(res.data.error||"Нет доступа")}</td></tr>`; return; }
+  body.innerHTML=`<tr><td colspan="6" class="empty">Загрузка…</td></tr>`;
+  let res; try{ res=await apiJSON("/api/users"); }catch(_){ body.innerHTML=`<tr><td colspan="6" class="empty">Сервер недоступен</td></tr>`; return; }
+  if(!res.ok){ body.innerHTML=`<tr><td colspan="6" class="empty">${esc(res.data.error||"Нет доступа")}</td></tr>`; return; }
   const roles=res.data.roles;
   const users=[...res.data.users].sort((a,b)=>{
     const ap=a.role==="pending"?0:1, bp=b.role==="pending"?0:1;
@@ -1411,6 +1411,8 @@ async function renderAdmin(){
   body.innerHTML = users.map(u=>{
     const opts=roles.map(r=>`<option value="${r.k}" ${u.role===r.k?"selected":""}>${esc(r.t)}</option>`).join("");
     const created=(u.created_at||"").slice(0,10).split("-").reverse().join(".");
+    const seenAt=u.last_seen_at ? new Date(u.last_seen_at) : null;
+    const seen=seenAt && !isNaN(seenAt) ? seenAt.toLocaleString("ru-RU",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "—";
     const isMe=u.login===ME.login;
     const status = u.role==="pending"
       ? `<span class="badge-pending">ожидает роли</span>`
@@ -1420,6 +1422,7 @@ async function renderAdmin(){
       <td><select class="role-sel" data-role>${opts}</select></td>
       <td>${status}</td>
       <td class="num">${created}</td>
+      <td class="num">${seen}</td>
       <td style="white-space:nowrap"><button class="uact" data-act="name">ФИО</button> <button class="uact" data-act="resetpw">Пароль</button> <button class="uact" data-act="toggle">${u.active?"Заблокировать":"Разблокировать"}</button> <button class="uact del" data-act="delete">Удалить</button></td>
     </tr>`;
   }).join("");

@@ -37,7 +37,7 @@ from email.utils import formataddr
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-APP_VERSION = "1.6.1"
+APP_VERSION = "1.6.2"
 HOST = os.environ.get("SMYVY_HOST", "127.0.0.1")
 PORT = int(os.environ.get("SMYVY_PORT", "8000"))
 DB_PATH = os.path.join(BASE, "smyvy_app.db")
@@ -49,6 +49,7 @@ JOURNAL_CACHE = {"rev": 0, "payload": None}
 BACKUP_HOUR = 20
 SECRET_PATH = os.path.join(BASE, ".secret")
 SESSION_TTL = 12 * 3600
+LAST_SEEN_STEP = 5 * 60
 
 ROLES = ("pending", "viewer", "quality", "admin")
 ROLE_TITLES = {"pending": "Ожидает роли", "viewer": "Наблюдатель",
@@ -257,6 +258,8 @@ def init_schema():
         con.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
     if "must_change_pw" not in cols:
         con.execute("ALTER TABLE users ADD COLUMN must_change_pw INTEGER NOT NULL DEFAULT 0")
+    if "last_seen_at" not in cols:
+        con.execute("ALTER TABLE users ADD COLUMN last_seen_at TEXT")
     con.execute("UPDATE users SET full_name=login WHERE full_name IS NULL OR trim(full_name)=''")
     con.executescript("""
     CREATE TABLE IF NOT EXISTS probes(
@@ -887,6 +890,16 @@ class Handler(SimpleHTTPRequestHandler):
             return None
         con = db()
         row = con.execute("SELECT * FROM users WHERE id=? AND active=1", (uid,)).fetchone()
+        if row:
+            # последний визит для админа; пишем не чаще раза в LAST_SEEN_STEP секунд
+            stamp = now()
+            edge = (datetime.datetime.now(timezone.utc) - datetime.timedelta(seconds=LAST_SEEN_STEP)).isoformat(timespec="seconds")
+            if (row["last_seen_at"] or "") < edge:
+                try:
+                    con.execute("UPDATE users SET last_seen_at=? WHERE id=?", (stamp, uid))
+                    con.commit()
+                except sqlite3.OperationalError:
+                    pass
         con.close()
         return row
 
@@ -912,7 +925,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not u or u["role"] != "admin":
                 return self._err("нужны права администратора", 403)
             con = db()
-            rows = [{"id": r["id"], "login": r["login"], "full_name": r["full_name"] or r["login"], "role": r["role"], "active": r["active"], "created_at": r["created_at"]}
+            rows = [{"id": r["id"], "login": r["login"], "full_name": r["full_name"] or r["login"], "role": r["role"], "active": r["active"], "created_at": r["created_at"], "last_seen_at": r["last_seen_at"]}
                     for r in con.execute("SELECT * FROM users ORDER BY id")]
             con.close()
             return self._json({"users": rows, "roles": [{"k": k, "t": ROLE_TITLES[k]} for k in ROLES]})
